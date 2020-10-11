@@ -1,0 +1,36 @@
+-- Originally authored by ThatRobHuman
+-- updated by r35krag0th
+
+-- You will need to set the following in your code
+-- ScriptClass = "MyCoolThing"
+-- ScriptNamespace = "ThingForMyGame"
+-- ScriptVersion = 1234
+
+function checkForUpdate()
+    local base_url = 'https://raw.githubusercontent.com/r35krag0th/tts-r35/main/src/' .. ScriptNamespace
+    WebRequest.get(base_url .. '/' .. ScriptClass .. ".json", function(res)
+        if (not(res.is_error)) then
+            local response = JSON.decode(res.text)
+		    if (response[ScriptClass] > ScriptVersion) then
+    			print('New Version ('..response[ScriptClass]..') of '..ScriptClass..' is available!')
+			    --install update?
+			    installUpdate(base_url .. '/' .. ScriptClass .. ".ttslua")
+		    end
+        else
+            error(res)
+        end
+    end)
+end
+
+function installUpdate(file_url)
+	print('[5FDD9D]Installing Upgrade to ' .. ScriptNamespace .. '.' .. ScriptClass .. ' [' .. tostring(newVersion) .. '][-]')
+	WebRequest.get('yourgithubfile.lua', function(res)
+        if (not(res.is_error)) then
+		self.setLuaScript(res.text)
+		self.reload()
+		print('[5FDD9D]Installation Successful[-]')
+        else
+            error(res)
+        end
+    end)
+end

@@ -1,0 +1,907 @@
+--[[
+TODO: Make a reset button on the back of the counters that will reset to max value (or a context menu?)
+TODO: Adjust the scale of the counters to half of what they currently are; they're FUCKING HUGE
++DONE: Spown the counters in a stack on the card?
+      Maybe spawn them first and then spawn the fix on top?
+TODO: Fix the red color that the health counter is using; currently it uses the tint color for hte master figs
+      and that is MUCH LIGHTER than they are supposed to be.
+    USE --> AD1311 or 174, 20, 18, 255
+TODO: Track the health counters and clean them up as well
+]]
+
+-- MIH Class keeps track of objects that we should be owning
+DMIH_Class         = "monster.mat"
+DMIH_LoadedMonster = ""
+
+create_debug_lines = false
+
+#include tts-r35/src/descent-2e/monster-information/Colors
+
+-- Lazy hacking URLs for now.
+gist_sha = "32557198d41bdfa0363c161e56a58457f1a0f83a"
+gist_base_url = "https://gist.githubusercontent.com/r35krag0th/a1406b7306becc5e1633babd777f5693/raw/" .. gist_sha
+-- fig_script_url = gist_base_url .. "/fig.lua"
+fig_script_url = gist_base_url .. "/fig_with_hp_bar.lua"
+counter_script_url = gist_base_url .. "/health_counter.lua"
+
+-- monster_data = {}
+
+master_attack_buttons = {}
+minion_attack_buttons = {}
+master_defense_buttons = {}
+minion_defense_buttons = {}
+
+COLOR_DICE_GREEN = {} -- #009900; 0, 153, 0
+HEALTH_COUNTER_DESCRIPTION = "[00FF00]Left click[-] - Increase\n[FF0000]Right click[-] - Decrease"
+
+-- The following are persisted to the state for this object.
+button_index_lookup = {}
+tracked_figs = {}
+tracked_health_counters = {}
+current_monster = {}
+
+function deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+
+function save_current_state()
+  -- print("save_current_state()")
+
+  -- this needs to be a little more complicated/smart
+  new_save_state = {
+    tracked_figs = {},
+    tracked_health_counters = {},
+    current_monster = current_monster,
+  }
+
+  for name, fig_obj in pairs(tracked_figs) do
+    if fig_obj ~= nil then
+      new_save_state.tracked_figs[name] = fig_obj.getGUID()
+    end
+  end
+
+  for name, counter_obj in pairs(tracked_health_counters) do
+    if counter_obj ~= nil then
+      new_save_state.tracked_health_counters[name] = counter_obj.getGUID()
+    end
+  end
+  -- log(new_save_state, "r35 MIH - Saved State", "saved_state")
+
+  self.script_state = JSON.encode(new_save_state)
+  self.setDescription(self.script_state)
+end
+
+function onLoad(saved_data)
+  if saved_data ~= "" then
+    local loaded_data = JSON.decode(saved_data)
+    tracked_figs = {}
+    tracked_health_counters = {}
+    current_monster = loaded_data.current_monster
+
+    for name, fig_guid in pairs(loaded_data.tracked_figs) do
+      if fig_obj ~= nil then
+        tracked_figs[name] = getObjectFromGUID(fig_guid)
+      end
+    end
+
+    for name, counter_guid in pairs(loaded_data.tracked_health_counters) do
+      if counter_obj ~= nil then
+        tracked_health_counters[name] = getObjectFromGUID(counter_guid)
+      end
+    end
+  end
+
+  self.createButton({
+    label="Setup",
+    tooltip="Click to load data for the card in the white box.",
+    click_function="setup_monster",
+    function_owner=self,
+    position={
+      x = -0.95,
+      y = 0.1,
+      z = 1.02,
+    },
+    rotation={
+      x = 0,
+      y = 0,  -- 90 here will face it so that the top is towards the card
+      z = 0,
+    },
+    height=50,
+    width=400,
+    alignment=3,
+    color=COLOR_BLACK,
+    font_color=COLOR_WHITE,
+    font_size=100,
+    hover_color={0.12, 0.16, 0.18},
+    press_color={0.55, 0.65, 0.24},
+  })
+
+  -- X is left/right
+  -- Y is vertical up/down
+  -- Z is horizontal up/down (towards/away from camera)
+  local master_attack_button_template = {
+    label=" ",
+    click_function="do_nothing",
+    function_owner=self,
+    position={0, 0.1, -1.0},
+    height=128,
+    width=128,
+    color=COLOR_INVISIBLE,
+    font_color={1, 1, 1, 0},
+  }
+  local minion_attack_button_template = deepcopy(master_attack_button_template)
+  minion_attack_button_template.position[1] = minion_attack_button_template.position[1] + 1.3
+
+  local master_defense_button_template = deepcopy(master_attack_button_template)
+  master_defense_button_template.label = " "
+  master_defense_button_template.position[1] = master_defense_button_template.position[1] + 0.3
+
+  local minion_defense_button_template = deepcopy(master_defense_button_template)
+  minion_defense_button_template.position[1] = minion_defense_button_template.position[1] + 1.3
+
+  for i=1,4,1 do
+    -- Create the buttons
+    master_attack_button_template.label = "MasterAttack" .. i
+    minion_attack_button_template.label = "MinionAttack" .. i
+    master_attack_button_template.tooltip = master_attack_button_template.label
+    minion_attack_button_template.tooltip = minion_attack_button_template.label
+
+    master_attack_buttons[i] = self.createButton(master_attack_button_template)
+    minion_attack_buttons[i] = self.createButton(minion_attack_button_template)
+
+    master_defense_button_template.label = "MasterDefense" .. i
+    minion_defense_button_template.label = "MinionDefense" .. i
+    master_defense_button_template.tooltip = master_defense_button_template.label
+    minion_defense_button_template.tooltip = minion_defense_button_template.label
+
+    master_defense_buttons[i] = self.createButton(master_defense_button_template)
+    minion_defense_buttons[i] = self.createButton(minion_defense_button_template)
+
+    -- Increment the positions
+    master_attack_button_template.position[3] = master_attack_button_template.position[3] + 0.3
+    minion_attack_button_template.position[3] = minion_attack_button_template.position[3] + 0.3
+    master_defense_button_template.position[3] = master_defense_button_template.position[3] + 0.3
+    minion_defense_button_template.position[3] = minion_defense_button_template.position[3] + 0.3
+  end
+
+  for index, button in pairs(self.getButtons()) do
+    button_index_lookup[button.label] = index
+  end
+end
+
+function do_nothing()
+end
+
+function load_monster_data(name, act, callback)
+  name = name:gsub('%W','')
+  name = name:lower()
+
+  url = "https://descent-2e.r35.net/api/v1/monster/" .. name .. "/act/" .. act
+
+  WebRequest.get(url, callback)
+end
+
+function parse_monster_card_name(card_name)
+  local monster_name, monster_act = card_name:match("(.+) Act (%u)")
+  return {
+    name = monster_name,
+    act = monster_act,
+  }
+end
+
+function flatten_dice_data(dice)
+  local output = {}
+  for color_name, dice_count in pairs(dice) do
+    for i=1,dice_count,1 do
+      table.insert(output, color_name)
+    end
+  end
+  return output
+end
+
+function reset_dice_indicators()
+  if button_index_lookup == nil then
+    return
+  end
+
+  for button_label, button_index in pairs(button_index_lookup) do
+    -- EditButton uses 0-based indices, where as LUA uses 1-based indices
+    if button_index - 1 >= 1 then
+      self.editButton({
+        index = button_index - 1,
+        color = COLOR_INVISIBLE,
+      })
+    end
+  end
+end
+
+function clean_up_board()
+  reset_dice_indicators()
+  -- print("(clean_up_board) cleaning up tracked figurines")
+  for fig_name, fig_obj in pairs(tracked_figs) do
+    if fig_obj ~= nil and fig_obj.getName() == fig_name then
+      print("[6699CC](r35.DMIH)[-] Removing tracked [00FF00]fig [00FFFF]" .. fig_name .. "[-] (" .. fig_obj.guid .. ")")
+      fig_obj.destroyObject()
+    end
+  end
+  -- print("(clean_up_board) resetting tracked_figs")
+  tracked_figs = {}
+
+  -- print("(clean_up_board) cleaning up tracked health counters")
+  for counter_name, counter_obj in pairs(tracked_health_counters) do
+    -- log(counter_name, "Health Counter Name: ", "health_counter_debug")
+    -- log(counter_obj, "Health Counter Object: ", "health_counter_debug")
+    if counter_obj ~= nil then
+      if counter_obj.getName() == counter_name then
+        print("[6699CC](r35.DMIH)[-] Removing tracked [00FF00]health counter [00FFFF]" .. counter_name .. "[-] (" .. counter_obj.guid .. ")")
+        counter_obj.destroyObject()
+      end
+    -- else
+    --   print("[6699CC](r35.DMIH)[-] [FF0000]Counter(" .. counter_name .. ")[-] was actually null...")
+    end
+  end
+  -- print("(clean_up_board) resetting tracked_health_counters")
+  tracked_health_counters = {}
+end
+
+function setup_monster()
+  print("[00FFFF]=============================================================[-]")
+  clean_up_board()
+
+  local card_pos = self.positionToWorld({1, 0, 0})
+  local find_func = function(a) return a.tag == "Card" end
+  local card_list = find_in_radius_by(card_pos, 1, find_func)
+
+  if #card_list ~= 1 then
+    broadcastToAll("[6699CC](r35.DMIH)[-] No card was found on the monster setup board", {0.9, 0.2, 0.2})
+    self.UI.setAttributes("monsterName", {
+      text = "",
+      active = false,
+    })
+    return
+  end
+
+  local parsed_name = parse_monster_card_name(card_list[1].getName())
+
+  load_monster_data(parsed_name.name, parsed_name.act, function(a)
+    current_monster = JSON.decode(a.text)
+
+    if current_monster == nil or (current_monster ~= nil and current_monster.error ~= nil and current_monster.error.code == 404) then
+      broadcastToAll("[6699CC](r35.DMIH)[-] Could not find monster data for " .. card_list[1].getName(), {0.9, 0.2, 0.2})
+      self.UI.setAttributes("monsterName", {
+        text = "",
+        active = false,
+      })
+      return
+    end
+
+    if current_monster.kind == "Monster" then
+        setup_master_dice_indicators()
+        setup_minion_dice_indicators()
+    elseif current_monster.kind == "Lieutenant" then
+      setup_lieutenant_dice_indicators()
+    end
+
+    broadcastToAll("[6699CC](r35.DMIH)[-] Successfully Loaded " .. current_monster.name .. " (Act " .. current_monster.act .. ")!")
+    self.UI.setAttributes("monsterName", {
+      text = current_monster.name,
+      active = true,
+    })
+
+      -- persist the curren state
+      save_current_state()
+  end)
+end
+
+function setup_lieutenant_dice_indicators()
+    local lt_attack_dice = flatten_dice_data(current_monster.by_group_size["4"].dice.attack)
+    local lt_defense_dice = flatten_dice_data(current_monster.by_group_size["4"].dice.defense)
+
+    for i, v in pairs(lt_attack_dice) do setup_dice_for("MasterAttack" .. i, { color = color_mapping[v] }) end
+    for i, v in pairs(lt_defense_dice) do setup_dice_for("MasterDefense" .. i, { color = color_mapping[v] }) end
+
+    create_fig(current_monster.figurine, current_monster.name, {
+        x = (1 * -0.75) + 2.25,
+        y = 0,
+        z = 1.75
+    }, true)
+end
+
+function setup_master_dice_indicators()
+    -- Flatten the dice into a single array of the color names, repeating for multiple of a kind
+    local master_attack_dice = flatten_dice_data(current_monster.master.dice.attack)
+    local master_defense_dice = flatten_dice_data(current_monster.master.dice.defense)
+
+
+    -- Enable the related buttons for each dice that this monster has
+    for i, v in pairs(master_attack_dice) do setup_dice_for("MasterAttack" .. i, { color = color_mapping[v] }) end
+    for i, v in pairs(master_defense_dice) do setup_dice_for("MasterDefense" .. i, { color = color_mapping[v] }) end
+
+    -- Create all of the figs that are needed
+    -- NOTE: the spacing is kind of screwy when you have 2x1 or 2x2 monsters
+    --       I will eventually figure out how I want to handle that.
+    for i=1, current_monster.master.group_count["4"], 1 do
+      local master_fig_name = current_monster.name .. " Master " .. i
+      -- print("(setup_monster) calling create_fig() for " .. master_fig_name)
+      create_fig(current_monster.figurine, master_fig_name, {
+        x = (i * -0.75) + 2.25,
+        y = 0,
+        z = 1.75,
+      }, true)
+    end
+end
+
+function setup_minion_dice_indicators()
+    local minion_attack_dice = flatten_dice_data(current_monster.minion.dice.attack)
+    local minion_defense_dice = flatten_dice_data(current_monster.minion.dice.defense)
+    for i, v in pairs(minion_attack_dice) do setup_dice_for("MinionAttack" .. i, { color = color_mapping[v] }) end
+    for i, v in pairs(minion_defense_dice) do setup_dice_for("MinionDefense" .. i, {color = color_mapping[v] }) end
+
+    local additional_minion_offset = {x = 0, y = 0, z = 0}
+    for i=1, current_monster.minion.group_count["4"], 1 do
+      if i > 5 then
+        additional_minion_offset = {x = (2.25 * 2) - 0.75, y = 0, z = 1}
+      end
+      local minion_fig_name = current_monster.name .. " Minion " .. i
+      create_fig(current_monster.figurine, minion_fig_name, {
+        x = (i * -0.75) + 2.25 + additional_minion_offset.x,  -- i * -0.25
+        y = 0 + additional_minion_offset.y,          -- 0
+        z = 3.00 + additional_minion_offset.z        -- 0.5
+      }, false)
+    end
+end
+
+function setup_dice_for(target_label, params)
+  local button_index = button_index_lookup[target_label]
+  if button_index == nil then
+    return
+  end
+
+  -- EditButton uses 0-based indices
+  params.index = button_index - 1
+  self.editButton(params)
+end
+
+function find_in_radius_by(pos, radius, func)
+  local object_list = Physics.cast({
+    origin=pos,
+    direction={0, 1, 0},
+    type=2,
+    size={radius, radius, radius},
+    max_distance=0,
+  })
+
+  local refined_list = {}
+  for _, obj in ipairs(object_list) do
+    if func == nil then
+      table.insert(refined_list, obj.hit_object)
+    else
+      if func(obj.hit_object) then
+        table.insert(refined_list, obj.hit_object)
+      end
+    end
+  end
+
+  return refined_list
+end
+
+function find_closest_in_radius_by(pos, radius, filter_func)
+  -- Get the objects at the given position with the radius
+  -- log(pos, "Find Closest In Radius By (Position): ", "find_closest_in_radius_by")
+  -- log(radius, "Find Closest In Radius By (Radius): ", "find_closest_in_radius_by")
+  -- log(filter_func, "Find Closest In Radius By (Filter Func): ", "find_closest_in_radius_by")
+
+  if type(radius) == "number" then
+    radius = {radius, radius, radius}
+  end
+
+  local object_list = Physics.cast({
+    origin=pos,
+    direction={0, 1, 0},
+    type=3,
+    size=radius,
+    max_distance=1,
+    debug = false,
+  })
+
+  -- Apply the filtering function
+  local refined_list = {}
+  for _, obj in ipairs(object_list) do
+    if filter_func == nil then
+      table.insert(obj)
+    else
+      if filter_func(obj.hit_object) then
+        table.insert(obj)
+      end
+    end
+  end
+
+  -- Find the closest object out of all objects returned
+  local output = nil
+  for i, v in pairs(object_list) do
+    if output == nil then
+      output = v
+    else
+      if v.distance < output.distance then
+        output = v
+      end
+    end
+  end
+  return output
+end
+
+function create_fig(fig_data, name, fig_pos, is_master)
+  if is_master == nil then
+    is_master = false
+  end
+
+  if fig_data == nil or fig_data.mesh == nil or fig_data.diffuse == nil or fig_data.collider == nil then
+    broadcastToAll("[6699CC](r35.DMIH)[-] No Figure Models are available for " .. current_monster.name, {0.9, 0.2, 0.2})
+    return;
+  end
+
+  local which_color_callback = color_fig_as_minion
+  local monster_data = current_monster.minion
+  local which_create_health_counter = create_minion_health_counter
+  if is_master then
+    which_color_callback = color_fig_as_master
+    monster_data = current_monster.master
+    which_create_health_counter = create_master_health_counter
+  end
+
+  if current_monster.kind == "Lieutenant" then
+    which_color_callback = color_fig_as_lieutenant
+    which_create_health_counter = create_lieutenant_health_counter
+    monster_data = {
+      health = current_monster.by_group_size["4"].health,
+      speed = current_monster.by_group_size["4"].speed,
+      abilities = current_monster.abilities,
+      attributes = current_monster.attributes,
+    }
+  end
+
+  local rel_pos = self.positionToWorld(fig_pos)
+  -- name, health_total, position, rotation, scale
+  health_counter = which_create_health_counter(name, monster_data.health, rel_pos, {0, 180, 0}, {0.5, 1.0, 0.5})
+  -- tracked_health_counters[name] = health_counter
+
+  fig = spawnObject({
+    type              = "Custom_Model",
+    position          = {
+      x = rel_pos.x,
+      y = rel_pos.y + 0.2,
+      z = rel_pos.z,
+    },
+    rotation          = {
+      x = 0,
+      y = 0,
+      z = 0,
+    },
+    scale             = {1, 1, 1},
+    callback_function = which_color_callback,
+    sound             = false,
+    snap_to_grid      = true,
+  })
+
+  fig.setCustomObject({
+    mesh = fig_data.mesh,
+    diffuse = fig_data.diffuse,
+    normal = '',
+    collider = fig_data.collider,
+    convex = True,
+    material = 3,
+    type = 1,
+  })
+  fig.setName(name)
+
+    
+  -- set the DMIH trackers
+  function f()
+    fig.script_state = ""
+    
+    -- Set a few variables
+    -- fig.setVar('DMIH_CLASS', 'monster.fig')
+    -- fig.setVar('DMIH_NAME', name)
+    -- fig.setVar('DMIH_OWNER', self.getGUID())
+
+    -- fig.call('save_current_state')
+    fig.reload()
+  end
+  local req = WebRequest.get(fig_script_url, function(res)
+    if (not(res.is_error)) then
+      Wait.condition(f, function() return fig.setLuaScript(res.text) end)
+    else
+      error(res)
+    end
+  end)
+  
+
+  fig_description = ""
+  fig_description = fig_description .. "\n[FF0000]Health: " .. monster_data.health .. "[-]"
+  fig_description = fig_description .. "\n[00FF00]Speed: " .. monster_data.speed .. "[-]"
+  fig_description = fig_description .. "\n"
+  for _, v in pairs(monster_data.abilities) do
+    fig_description = fig_description .. "\n" .. v
+  end
+
+  fig.setDescription(fig_description)
+  tracked_figs[name] = fig
+
+  return fig
+end
+
+function color_fig_as_minion(obj, name, player_color)
+  obj.setColorTint(color_mapping.minion)
+end
+
+function color_fig_as_master(obj, name, player_color)
+  obj.setColorTint(color_mapping.master)
+end
+
+function color_fig_as_lieutenant(obj, name, player_color)
+  obj.setColorTint(color_mapping.lieutenant)
+end
+
+function trim(s)
+   return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
+function split_by_colon(s)
+    return string.gmatch(s, "([^:]+)")
+end
+
+function split_by_colon_kv(s)
+    return s:match("([^:]+):(.*)")
+end
+
+function split_by_spaces(s)
+    local output = {}
+    for v in string.gmatch(s, "([^ ]+)") do
+        table.insert(output, v)
+    end
+    return output
+end
+
+function find_or_create_notebook(title, body)
+  for i, v in pairs(Notes.getNotebookTabs()) do
+    if v ~= nil and v.title ~= nil and v.title == title then
+      Notes.editNotebookTab({
+        index = i,
+        title = v.title,
+        body  = body,
+      })
+      return
+    end
+  end
+
+  Notes.addNotebookTab({
+    title = title,
+    body = body,
+  })
+end
+
+function configure_health_counter(obj, name)
+  print("configure_health_counter has been called for " .. name)
+end
+
+function create_health_counter_v2(rgb_color, text_color, name, max_health, position, rotation, scale)
+  -- doing this the more manually fun way?
+  -- local spawn_params = {
+  --   type = "Custom_Token",
+  --   position = position,
+  --   rotation = rotation,
+  --   scale = scale,
+  --   callback_function = |obj| configure_health_counter(obj, name),
+  --   sount = false,
+  --   snap_to_grid = true,
+  -- }
+  -- local custom_params = {
+  --   image = "http://cloud-3.steamusercontent.com/ugc/958597478463059274/DE73B64E1B5C6F272EA3BEE5EF458E73E48FF03D/",
+  --   thickness = 0.1,
+  --   merge_distance = 5,
+  --   stackable = false,
+  --   stand_up = false,
+  -- }
+  local initial_counter_state = "{\"COLOR_HEX\":\"#%FONT_COLOR_IN_HEX%\",\"CONTEXT_FIVE\":false,\"CONTEXT_TEN\":false,\"FONT_COLOR\":[%FONT_COLOR_IN_RGBA%],\"FONT_SIZE\":800,\"MAX_VALUE\":%MAX_VALUE%,\"MIN_VALUE\":0,\"NUMBER_TYPED\":false,\"TOOLTIP_SHOW\":false,\"VALUE\":%MAX_VALUE%}"
+  initial_counter_state = string.gsub(initial_counter_state, "%%NAME%%", name)
+  initial_counter_state = string.gsub(initial_counter_state, "%%MAX_VALUE%%", tostring(max_health))
+  initial_counter_state = string.gsub(initial_counter_state, "%%FONT_COLOR_IN_HEX%%", text_color.hex)
+  initial_counter_state = string.gsub(initial_counter_state, "%%FONT_COLOR_IN_RGBA%%", table.concat(text_color.rgba, ","))
+
+  new_health_counter = spawnObject({
+    type = "Custom_Token",
+    position = position,
+    rotation = rotation,
+    scale = scale,
+    callback_function = |obj| configure_health_counter(obj, name),
+    sount = false,
+    snap_to_grid = true,
+  })
+  -- print("==> Just after SpawnObject")
+  -- -- dump(new_health_counter)
+  -- print(inspect_lua(new_health_counter))
+  -- print(inspect_lua(new_health_counter.getGUID()))
+  -- print(inspect_lua(new_health_counter.guid))
+
+  new_health_counter.setCustomObject({
+    image = "http://cloud-3.steamusercontent.com/ugc/958597478463059274/DE73B64E1B5C6F272EA3BEE5EF458E73E48FF03D/",
+    thickness = 0.1,
+    merge_distance = 5,
+    stackable = false,
+    stand_up = false,
+  })
+  -- print("==> Just after new_health_counter.setCustomObject")
+  -- print(inspect_lua(new_health_counter))
+  -- print(inspect_lua(new_health_counter.getGUID()))
+  -- print(inspect_lua(new_health_counter.guid))
+  new_health_counter.drag = 10
+  new_health_counter.angular_drag = 1
+  new_health_counter.mass = 0.91
+
+  new_health_counter.setName(name)
+  new_health_counter.setDescription(HEALTH_COUNTER_DESCRIPTION)
+  new_health_counter.setColorTint(rgb_color)
+  new_health_counter.setLuaScript("CONFIG = {\n    MIN_VALUE = -99,\n    MAX_VALUE = 999,\n    FONT_COLOR = {0,0,0,95},\n    FONT_SIZE = 600,\n    COLOR_HEX = \"#000000\",\n    TOOLTIP_SHOW = true,\n    VALUE = 0,\n    CONTEXT_FIVE = true,\n    CONTEXT_TEN = true,\n    NUMBER_TYPED = true,\n}\nINJECTED_COUNTER = true\n\n\nfunction onload(saved_data)\n    if saved_data ~= \"\" then\n        local loaded_data = JSON.decode(saved_data)\n        CONFIG = loaded_data\n    end\n    if CONFIG.CONTEXT_FIVE then\n        self.addContextMenuItem(\"+5\", add_5, true)\n        self.addContextMenuItem(\"-5\", sub_5, true)\n    end\n    if CONFIG.CONTEXT_TEN then\n        self.addContextMenuItem(\"+10\", add_10, true)\n        self.addContextMenuItem(\"-10\", sub_10, true)\n    end\n    if CONFIG.NUMBER_TYPED then\n        self.max_typed_number = CONFIG.MAX_VALUE\n    end\n    createAll()\nend\n\nfunction onNumberTyped(player_color, number_typed)\n    new_value = math.min(math.max(number_typed, CONFIG.MIN_VALUE), CONFIG.MAX_VALUE)\n    if CONFIG.VALUE ~= new_value then\n        CONFIG.VALUE = new_value\n        updateVal()\n        updateSave()\n    end\nend\n\nfunction add_10()\n    for x=1, 10 do\n        add_subtract(nil, nil, false)\n    end\nend\nfunction add_5()\n    for x=1, 5 do\n        add_subtract(nil, nil, false)\n    end\nend\n\nfunction sub_5()\n    for x=1, 5 do\n        add_subtract(nil, nil, true)\n    end\nend\nfunction sub_10()\n    for x=1, 10 do\n        add_subtract(nil, nil, true)\n    end\nend\n\nfunction updateSave()\n    saved_data = JSON.encode(CONFIG)\n    self.script_state = saved_data\nend\n\nfunction createAll()\n    if CONFIG.TOOLTIP_SHOW then\n        ttText = self.getName().. \": \" .. CONFIG.VALUE\n    else\n        ttText = self.getName()\n    end\n    local scale = {x=1.5, y=1.5, z=1.5}\n    local thickness = self.getBoundsNormalized().size.y\n    if self.name == \"Custom_Tile\" then\n        thickness = thickness*2\n        scale = {0.75, 0.75, 0.75}\n    end\n    self.createButton({\n      label=tostring(CONFIG.VALUE),\n      click_function=\"add_subtract\",\n      tooltip=ttText,\n      function_owner=self,\n      position={0, thickness/2, -0.2},\n      height=600,\n      width=1000,\n      alignment = 3,\n      scale=scale,\n      font_size=CONFIG.FONT_SIZE,\n      font_color=CONFIG.FONT_COLOR,\n      color={0,0,0,0}\n      })\n\n    self.createInput({\n        value = self.getName(),\n        input_function = \"editName\",\n        tooltip=ttText,\n        label = \"\",\n        function_owner = self,\n        alignment = 3,\n        position = {0,thickness/2,1.7},\n        width = 1200,\n        height = 1000,\n        font_size = CONFIG.FONT_SIZE/3,\n        scale={x=1, y=1, z=1},\n        font_color= CONFIG.FONT_COLOR,\n        color = {0,0,0,0}\n        })\n\n    setTooltips()\nend\n\nfunction editName(_obj, _string, value)\n    self.setName(value)\n    setTooltips()\nend\n\nfunction add_subtract(_obj, _color, alt_click)\n    mod = alt_click and -1 or 1\n    new_value = math.min(math.max(CONFIG.VALUE + mod, CONFIG.MIN_VALUE), CONFIG.MAX_VALUE)\n    if CONFIG.VALUE ~= new_value then\n        CONFIG.VALUE = new_value\n        updateVal()\n        updateSave()\n    end\nend\n\nfunction updateVal()\n    self.editButton({\n        index = 0,\n        label = tostring(CONFIG.VALUE)\n        })\n    setTooltips()\nend\n\nfunction setTooltips()\n    if CONFIG.TOOLTIP_SHOW then\n        ttText = self.getName().. \": \" .. CONFIG.VALUE\n    else\n        ttText = self.getName()\n    end\n\n    self.editInput({\n        index = 0,\n        value = self.getName(),\n        tooltip = ttText\n        })\n    self.editButton({\n        index = 0,\n        value = tostring(CONFIG.VALUE),\n        tooltip = ttText\n        })\nend")
+  new_health_counter.script_state = initial_counter_state
+  new_health_counter.setSnapPoints({
+    {
+      position         = {0, 0, 0},
+      rotation         = {0, 0, 0},
+      rotation_snap    = true,
+    },
+  })
+  -- new_health_counter.luascript = "-- Coming soon\n"
+  -- new_health_counter.lua_script_state = "{}"
+  -- print("==> Just before new_health_counter.reload")
+  -- print(inspect_lua(new_health_counter))
+  -- print(inspect_lua(new_health_counter.getGUID()))
+  -- print(inspect_lua(new_health_counter.guid))
+  new_health_counter.reload()
+
+  -- print("==> Just after new_health_counter.reload")
+  -- print(inspect_lua(new_health_counter))
+  -- print(inspect_lua(new_health_counter.getGUID()))
+  -- print(inspect_lua(new_health_counter.guid))
+
+  tracked_health_counters[name] = new_health_counter
+
+  -- print("Physics casting for the new counter")
+  -- log(new_health_counter, "new_health_counter", "health_counter")
+  -- X = width of "box"
+  -- Y = height of "box"
+  -- Z = depth of "box"
+
+  -- visualize the physics cast
+  local radius = {
+    width = 0.5,
+    height = 1,
+    depth = 0.5
+  }
+
+  --[[
+  0, 0
+  ]]
+  local thickness = 0.10
+  local current_lines = Global.getVectorLines()
+  local check_position = {
+    x = position.x,
+    y = position.y - (radius.height / 2),
+    z = position.z
+  }
+    if create_debug_lines then
+
+    -- x, y -> x+w, y+h -- .\.
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y, check_position.z},
+        {check_position.x + radius.width, check_position.y, check_position.z + radius.depth}
+      },
+      color = {1, 0, 0},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y + radius.height, check_position.z},
+        {check_position.x + radius.width, check_position.y + radius.height, check_position.z + radius.depth}
+      },
+      color = {1, 0, 0},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+
+    -- x, y+h -> x+w, y -- ./.
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y, check_position.z + radius.depth},
+        {check_position.x + radius.width, check_position.y, check_position.z}
+      },
+      color = {0, 1, 0},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y + radius.height, check_position.z + radius.depth},
+        {check_position.x + radius.width, check_position.y + radius.height, check_position.z}
+      },
+      color = {0, 1, 0},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+
+    -- x, y -> x, y+h
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y, check_position.z},
+        {check_position.x, check_position.y, check_position.z + radius.depth}
+      },
+      color = {0, 0, 1},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y + radius.height, check_position.z},
+        {check_position.x, check_position.y + radius.height, check_position.z + radius.depth}
+      },
+      color = {0, 0, 1},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+
+    -- x, y -> x+w, y
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y, check_position.z},
+        {check_position.x + radius.width, check_position.y, check_position.z}
+      },
+      color = {1, 1, 0},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y + radius.height, check_position.z},
+        {check_position.x + radius.width, check_position.y + radius.height, check_position.z}
+      },
+      color = {1, 1, 0},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+
+    -- x+w, y -> x+w, y+h
+    table.insert(current_lines, {
+      points = {
+        {check_position.x + radius.width, check_position.y, check_position.z},
+        {check_position.x + radius.width, check_position.y, check_position.z + radius.depth}
+      },
+      color = {0, 1, 1},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+    table.insert(current_lines, {
+      points = {
+        {check_position.x + radius.width, check_position.y + radius.height, check_position.z},
+        {check_position.x + radius.width, check_position.y + radius.height, check_position.z + radius.depth}
+      },
+      color = {0, 1, 1},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+
+    -- x, y+h -> x+w, y+h
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y, check_position.z + radius.depth},
+        {check_position.x + radius.width, check_position.y, check_position.z + radius.depth}
+      },
+      color = {1, 1, 1},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+    table.insert(current_lines, {
+      points = {
+        {check_position.x, check_position.y + radius.height, check_position.z + radius.depth},
+        {check_position.x + radius.width, check_position.y + radius.height, check_position.z + radius.depth}
+      },
+      color = {1, 1, 1},
+      thickness = thickness,
+      rotation = {0, 0, 0},
+    })
+
+    Global.setVectorLines(current_lines)
+  end
+
+  -- TRY to physics cast to find this fucking token
+  Wait.frames(function()
+    local this_counter = find_closest_in_radius_by(check_position, {radius.width, radius.height, radius.depth}, function(o)
+      local check_name_ok = o.getName() == name
+      local check_description_ok = o.getDescription() == HEALTH_COUNTER_DESCRIPTION
+      local check_tag_ok = (o.tag == "Tile" or o.tag == "Generic")
+
+      local is_found = check_name_ok and check_description_ok and check_tag_ok
+
+      -- print("[FFFF00]Checking " .. o.getName() .. " against " .. name .. "[-]")
+      -- print("--> " .. boolean_to_pass_fail_colored_string(check_name_ok) .. " name: " .. o.getName() .. " ||| Expecting: " .. name)
+      -- print("--> " .. boolean_to_pass_fail_colored_string(check_description_ok) .. " description: " .. o.getDescription() .. " ||| Expecting: " .. HEALTH_COUNTER_DESCRIPTION)
+      -- print("--> " .. boolean_to_pass_fail_colored_string(check_tag_ok) .. " tag: " .. o.tag .. " ||| Expecting: Generic or Tile")
+      -- print("<-- Final Result " .. boolean_to_pass_fail_colored_string(is_found))
+      -- print("")
+      -- log(o, "Physics Cast Object", "physics_cast_object")
+
+      if is_found then
+        o.highlightOn({0, 1, 0, 1}, 5)
+      -- else
+      --   o.highlightOn({1, 0, 0, 1}, 2)
+      end
+      -- return o.getName() == name and (o.tag == "Tile" or o.tag == "Generic") and o.getDescription() == HEALTH_COUNTER_DESCRIPTION
+      return is_found
+    end)
+
+    local o = this_counter.hit_object
+    local check_name_ok = o.getName() == name
+    local check_description_ok = o.getDescription() == HEALTH_COUNTER_DESCRIPTION
+    local check_tag_ok = (o.tag == "Tile" or o.tag == "Generic")
+
+    local is_found = check_name_ok and check_description_ok and check_tag_ok
+    -- print("[FFFF00] POST POST POST POST Checking " .. o.getName() .. " against " .. name .. "[-]")
+    -- print("--> " .. boolean_to_pass_fail_colored_string(check_name_ok) .. " name: " .. o.getName() .. " ||| Expecting: " .. name)
+    -- print("--> " .. boolean_to_pass_fail_colored_string(check_description_ok) .. " description: " .. o.getDescription() .. " ||| Expecting: " .. HEALTH_COUNTER_DESCRIPTION)
+    -- print("--> " .. boolean_to_pass_fail_colored_string(check_tag_ok) .. " tag: " .. o.tag .. " ||| Expecting: Generic or Tile")
+    -- print("<-- Final Result " .. boolean_to_pass_fail_colored_string(is_found))
+    -- print("")
+
+    tracked_health_counters[name] = this_counter.hit_object
+    -- this_counter.hit_object.highlightOn({0, 1, 1, 1}, 5)
+
+  end, 120)
+
+  return new_health_counter
+
+end
+
+function boolean_to_pass_fail_colored_string(v)
+  if v == true then
+    return "[00FF00](PASS)[-]"
+  end
+  return "[FF0000](FAIL)[-]"
+end
+
+function create_master_health_counter(name, max_health, position, rotation, scale)
+  return create_health_counter_v2(color_mapping.master_counter, {hex = "FFFFFF", rgba = {1, 1, 1, 95}}, name, max_health, position, rotation, scale)
+end
+
+-- "COLOR_HEX\":\"#3F3F3F\",\"CONTEXT_FIVE\":false,\"CONTEXT_
+
+function create_minion_health_counter(name, max_health, position, rotation, scale)
+  return create_health_counter_v2(color_mapping.minion, { hex = "333333", rgba = {0.24,0.24,0.24,95}}, name, max_health, position, rotation, scale)
+end
+
+function create_lieutenant_health_counter(name, max_health, position, rotation, scale)
+  return create_health_counter_v2(color_mapping.lieutenant_counter, { hex = "FFFFFF", rgba = {1, 1, 1, 95}}, name, max_health, position, rotation, scale)
+end
+
+function typeof(var)
+    local _type = type(var);
+    if(_type ~= "table" and _type ~= "userdata") then
+        return _type;
+    end
+    local _meta = getmetatable(var);
+    if(_meta ~= nil and _meta._NAME ~= nil) then
+        return _meta._NAME;
+    else
+        return _type;
+    end
+end
