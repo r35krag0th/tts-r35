@@ -1,41 +1,19 @@
 -- Gloomhaven Attack Helper
-#include tts-r35/src/utils/colors
-
 -- >>> Custom Token Image: https://cdn.r35.net/tts-modding/objects/rounded-squares/Gloomhaven-Attack-Helper-v2.png
---
--- TODO: Wire up the bottom side "base" values, which are essentially mirroring the top side.
---        > it may be worth functionalizing this such that we can just change the Y-offset
---        > so we don't have to literally duplicate all 6 buttons.
 
+ATTACK_HELPER_CUSTOM_TOKEN_IMAGE = "https://cdn.r35.net/tts-modding/objects/rounded-squares/Gloomhaven-Attack-Helper-v2.png"
+ATTACK_HELPER_VERSION = 1
+
+#include tts-r35/src/utils/colors
+#include tts-r35/src/utils/split_by_underscore
+
+-- TODO: Figure out where to put a reset button
 
 OUTPUT_BUTTON_WIDTH = 550
-OUTPUT_BUTTON_FONT_SIZE = 200
+OUTPUT_BUTTON_FONT_SIZE = 100
 OUTPUT_BUTTON_HEIGHT = 300
-OUTPUT_BUTTON_Y_OFFSET = 0.05
-
-COLOR_WHITE = {1, 1, 1, 1}
-COLOR_BLACK = {0, 0, 0, 1}
-
-COLOR_AIR = {0.60, 0.69, 0.71}
-COLOR_AIR_HEX = "98b0b4"
-
-COLOR_DARK = {0.12, 0.16, 0.18}
-COLOR_DARK_HEX = "1f282f"
-
-COLOR_EARTH = {0.55, 0.65, 0.24}
-COLOR_EARTH_HEX = "8ca73e"
-
-COLOR_FIRE = {0.89, 0.26, 0.13}
-COLOR_FIRE_HEX = "e24220"
-
-COLOR_ICE = {0.33, 0.78, 0.94}
-COLOR_ICE_HEX = "54c8ef"
-
-COLOR_LIGHT = {0.93, 0.65, 0.06}
-COLOR_LIGHT_HEX = "eca50f"
-
-COLOR_GREEN = {0.36, 0.55, 0.35, 1.0}      -- 5B8C5A
-COLOR_GRAYISH = {0.93, 0.95, 0.94, 1.0}    -- E09F3E ?? EDF2EF
+OUTPUT_BUTTON_Y_OFFSET_TOP = 0.05
+OUTPUT_BUTTON_Y_OFFSET_BOTTOM = -0.1
 
 COLORS = {
   move = hex_color_to_rgba("7cb07a"),
@@ -46,124 +24,173 @@ COLORS = {
 }
 
 COUNTERS = {
-  move = 0,
-  attack = 0,
-  range = 0,
-  shield = 0,
-  retaliate = 0,
-  retaliate_range = 0,
+  bonus = {
+    move = 0,
+    attack = 0,
+    range = 0,
+    shield = 0,
+    retaliate = 0,
+    retaliaterange = 0,
+  },
+  base = {
+    move = 0,
+    attack = 0,
+    range = 0,
+    shield = 0,
+    retaliate = 0,
+    retaliaterange = 0,
+  }
+}
+
+NAME = "No Name"
+
+button_index_to_button = {}
+button_grouped_by_scope_to_index = {
+  bonus = {},
+  base = {},
+  name = nil,
 }
 
 function onLoad(saved_data)
+  if saved_data ~= nil and saved_data ~= "" then
+    local deserialized = JSON.decode(saved_data)
+    if deserialized.COUNTERS ~= nil and type(deserialized.COUNTERS) == "table" then
+      local scopes = {"bonus", "base"}
+      for _, scope_name in pairs(scopes) do
+        if deserialized.COUNTERS[scope_name] ~= nil and type(deserialized.COUNTERS[scope_name]) == "table" then
+          for k, v in pairs(deserialized.COUNTERS[scope_name]) do
+            COUNTERS[scope_name][k] = v
+          end
+        end
+      end
+    end
+
+    if deserialized.NAME ~= nil and deserialized.NAME ~= "" then
+      NAME = deserialized.NAME
+    end
+  end
+
   create_all_buttons()
+
+  for button_index, button in pairs(self.getButtons()) do
+    button_index_to_button[button_index] = button
+
+    -- break down the click function names that are "handle_{name}_{scope}_click"
+    local click_function = button.click_function:gsub("handle_", ""):gsub("_click", "")
+    local function_name_parts = split_by_underscore(click_function)
+
+    if function_name_parts[2] == "base" or function_name_parts[2] == "bonus" then
+      button_grouped_by_scope_to_index[function_name_parts[2]][function_name_parts[1]] = button_index
+    elseif click_function == "name" then
+      button_grouped_by_scope_to_index.name = button_index
+    end
+  end
+
+  refresh_labels()
+
+  set_object_name(NAME)
+  self.setDescription("Backed by r35 CDN\n[b]Version:[/b] " .. ATTACK_HELPER_VERSION)
 end
 
-function create_all_buttons()
-  -- Programmatically create all the buttons for object's surface
+function save_current_state()
+  local save_state_structure = {
+    COUNTERS = COUNTERS,
+    NAME = NAME,
+  }
+  self.script_state = JSON.encode(save_state_structure)
+end
 
-  -- COLUMN 1
-  self.createButton({
-    label="1 (+1)",
-    click_function="handle_shield_bonus_click",
-    -- tooltip="Created Earth",
-    function_owner=self,
-    position={x = -1.40, y = OUTPUT_BUTTON_Y_OFFSET, z = 0.75},
-    height=OUTPUT_BUTTON_HEIGHT,
-    width=OUTPUT_BUTTON_WIDTH,
-    alignment=3,
-    -- scale={x=1.5, y=1.5, z=1.5},
-    font_size=OUTPUT_BUTTON_FONT_SIZE,
-    font_color={0, 0, 0, 1},
-    color=COLORS.shield,
-    icon="r35 GHEH Earth",
-    iconWidth=32,
-    iconColor={1,1,1,1},
+function set_object_name(new_name)
+  if new_name == nil or new_name == "" then
+    new_name = "No Name"
+  end
+
+  NAME = new_name
+  self.setName("GH Attack Helper - " .. NAME)
+
+  self.editButton({
+    index = button_grouped_by_scope_to_index.name - 1,
+    label = new_name,
   })
+end
 
-  self.createButton({
-    label="Mv",
-    click_function="handle_move_bonus_click",
-    tooltip="Created Fire",
-    function_owner=self,
-    position={x = -1.40, y = OUTPUT_BUTTON_Y_OFFSET, z = -0.1},
-    height=OUTPUT_BUTTON_HEIGHT,
-    width=OUTPUT_BUTTON_WIDTH,
-    alignment=3,
-    -- scale={x=1.5, y=1.5, z=1.5},
-    font_size=OUTPUT_BUTTON_FONT_SIZE,
-    font_color={0, 0, 0, 1},
-    color=COLORS.move,
-  })
+function create_button_set(y_offset, click_function_suffix)
+  click_function_suffix = click_function_suffix or "bonus"
 
-  -- COLUMN 2
-  self.createButton({
-    label="Ret",
-    click_function="handle_retaliate_bonus_click",
-    -- tooltip="Created Air",
-    function_owner=self,
-    position={x = 0.2, y = OUTPUT_BUTTON_Y_OFFSET, z = 0.75},
-    height=OUTPUT_BUTTON_HEIGHT,
-    width=OUTPUT_BUTTON_WIDTH,
-    alignment=3,
-    -- scale={x=1.5, y=1.5, z=1.5},
-    font_size=OUTPUT_BUTTON_FONT_SIZE,
-    font_color={1, 1, 1, 1},
-    color=COLORS.retaliate,
-  })
+  local common_button_params = {
+    label = click_function_suffix,
+    function_owner = self,
+    position = {
+      x = -1.40,
+      y = y_offset,
+      z = 0.75,
+    },
+    rotation = {
+      x = 0,
+      y = 0,
+      z = 0,
+    },
+    height = OUTPUT_BUTTON_HEIGHT,
+    width = OUTPUT_BUTTON_WIDTH,
+    alignment = 3,
+    font_size = OUTPUT_BUTTON_FONT_SIZE,
+    font_color = { 0, 0, 0, 1 },
+  }
+  if click_function_suffix == "base" then
+    common_button_params.rotation = { x = 180, y = 180, z = 0 }
+  end
 
-  self.createButton({
-    label="Atk",
-    click_function="handle_attack_bonus_click",
-    -- tooltip="Created Ice",
-    function_owner=self,
-    position={x = 0.2, y = OUTPUT_BUTTON_Y_OFFSET, z = -0.1},
-    height=OUTPUT_BUTTON_HEIGHT,
-    width=OUTPUT_BUTTON_WIDTH,
-    alignment=3,
-    -- scale={x=1.5, y=1.5, z=1.5},
-    font_size=OUTPUT_BUTTON_FONT_SIZE,
-    font_color={1, 1, 1, 1},
-    color=COLORS.attack,
-  })
+  common_button_params.click_function = string.format("handle_shield_%s_click", click_function_suffix)
+  common_button_params.color = COLORS.shield
+  common_button_params.font_color = COLOR_BLACK
+  common_button_params.position.x = -1.40
+  common_button_params.position.z = 0.75
+  self.createButton(common_button_params)
 
-  -- COLUMN 3
-  self.createButton({
-    label="RetR",
-    click_function="handle_retaliate_range_bonus_click",
-    -- tooltip="Created Dark",
-    function_owner=self,
-    position={x = 1.7, y = OUTPUT_BUTTON_Y_OFFSET, z = 0.75},
-    height=OUTPUT_BUTTON_HEIGHT,
-    width=OUTPUT_BUTTON_WIDTH,
-    alignment=3,
-    -- scale={x=1.5, y=1.5, z=1.5},
-    font_size=OUTPUT_BUTTON_FONT_SIZE,
-    font_color=COLOR_WHITE,
-    color=COLORS.retaliate,
-  })
+  common_button_params.click_function = string.format("handle_move_%s_click", click_function_suffix)
+  common_button_params.color = COLORS.move
+  common_button_params.font_color = COLOR_BLACK
+  common_button_params.position.x = -1.40
+  common_button_params.position.z = -0.1
+  self.createButton(common_button_params)
 
-  self.createButton({
-    label="Rng",
-    click_function="handle_range_bonus_click",
-    -- tooltip="Created Light",
-    function_owner=self,
-    position={1.85, OUTPUT_BUTTON_Y_OFFSET, -0.1},
-    height=OUTPUT_BUTTON_HEIGHT,
-    width=OUTPUT_BUTTON_WIDTH,
-    alignment=3,
-    -- scale={x=1.5, y=1.5, z=1.5},
-    font_size=OUTPUT_BUTTON_FONT_SIZE,
-    font_color=COLOR_BLACK,
-    color=COLORS.range,
-  })
+  common_button_params.click_function = string.format("handle_retaliate_%s_click", click_function_suffix)
+  common_button_params.color = COLORS.retaliate
+  common_button_params.font_color = COLOR_BLACK
+  common_button_params.position.x = 0.2
+  common_button_params.position.z = 0.75
+  self.createButton(common_button_params)
 
-  -- XP
+  common_button_params.click_function = string.format("handle_attack_%s_click", click_function_suffix)
+  common_button_params.color = COLORS.attack
+  common_button_params.font_color = COLOR_BLACK
+  common_button_params.position.x = 0.20
+  common_button_params.position.z = -0.1
+  self.createButton(common_button_params)
+
+  common_button_params.click_function = string.format("handle_retaliaterange_%s_click", click_function_suffix)
+  common_button_params.color = COLORS.retaliate
+  common_button_params.font_color = COLOR_BLACK
+  common_button_params.position.x = 1.7
+  common_button_params.position.z = 0.75
+  self.createButton(common_button_params)
+
+  common_button_params.click_function = string.format("handle_range_%s_click", click_function_suffix)
+  common_button_params.color = COLORS.range
+  common_button_params.font_color = COLOR_BLACK
+  common_button_params.position.x = 1.85
+  common_button_params.position.z = -0.1
+  self.createButton(common_button_params)
+end
+
+function create_top_buttons()
+  -- Create the "name" button
   self.createButton({
-    label="Bandit Archer",
-    click_function="do_nothing",
+    label=NAME,
+    click_function="handle_name_click",
     tooltip="",
     function_owner=self,
-    position={0, OUTPUT_BUTTON_Y_OFFSET, -0.83},
+    position={0, OUTPUT_BUTTON_Y_OFFSET_TOP, -0.83},
     height=200,
     width=1500,
     alignment=3,
@@ -173,55 +200,105 @@ function create_all_buttons()
     color=COLOR_BLACK,
   })
 
-  -- Reset
-  -- self.createButton({
-  --   label="R",
-  --   click_function="handle_reset_button",
-  --   tooltip="XP",
-  --   function_owner=self,
-  --   position={1, 0.05, -1.3},
-  --   height=200,
-  --   width=OUTPUT_BUTTON_WIDTH,
-  --   alignment=3,
-  --   scale={x=1.5, y=1.5, z=1.5},
-  --   font_size=OUTPUT_BUTTON_FONT_SIZE - 200,
-  --   font_color=COLOR_WHITE,
-  --   color={0.33, 0.04, 0.05, 1.0},
-  -- })
+  -- Create the 6 interaction buttons
+  create_button_set(OUTPUT_BUTTON_Y_OFFSET_TOP, "bonus")
+end
 
-  -- self.createButton({
-  --   label = "Use Custom Assets",
-  --   click_function = "handle_set_use_custom_assets",
-  --   function_owner = self,
-  --   alignment = 3,
-  --   position={0,-0.05,-1.2},
-  --   rotation={180,180,0},
-  --   height = 250,
-  --   width = 1000,
-  --   font_size = 100,
-  --   scale={x=1.5, y=1.5, z=1.5},
-  --   font_color=COLOR_BLACK,
-  --   color = custom_assets_button_color,
-  -- })
+function create_bottom_buttons()
+  self.createInput({
+    input_function = "handle_name_input",
+    function_owner = self,
+    label          = "Give me a Name!",
+    alignment      = 3,
+    position       = {0, OUTPUT_BUTTON_Y_OFFSET_BOTTOM, -0.83},
+    rotation       = {180, 180, 0},
+    width          = 1500,
+    height         = 200,
+    font_size      = 100,
+    color          = COLOR_BLACK,
+    font_color     = COLOR_WHITE,
+    value          = NAME,
+  })
+
+  create_button_set(OUTPUT_BUTTON_Y_OFFSET_BOTTOM, "base")
+end
+
+function create_all_buttons()
+  create_top_buttons()
+  create_bottom_buttons()
 end
 
 function do_nothing(o, p, right_clicked) end
 
-function handle_move_bonus_click(obj, player, right_clicked) change_counter_by("move", right_clicked) end
-function handle_attack_bonus_click(obj, player, right_clicked) change_counter_by("attack", right_clicked) end
-function handle_range_bonus_click(obj, player, right_clicked) change_counter_by("range", right_clicked) end
-function handle_shield_bonus_click(obj, player, right_clicked) change_counter_by("shield", right_clicked) end
-function handle_retaliate_bonus_click(obj, player, right_clicked) change_counter_by("retaliate", right_clicked) end
-function handle_retaliate_range_bonus_click(obj, player, right_clicked) change_counter_by("retaliate_range", right_clicked) end
+function handle_move_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "move", right_clicked) end
+function handle_attack_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "attack", right_clicked) end
+function handle_range_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "range", right_clicked) end
+function handle_shield_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "shield", right_clicked) end
+function handle_retaliate_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "retaliate", right_clicked) end
+function handle_retaliaterange_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "retaliaterange", right_clicked) end
 
-function change_counter_by(which_counter, value)
+function handle_name_click(obj, player, right_clicked) end
+
+---@param obj object The object the input is attached to
+---@param player_color string The player color that is interacting with this input
+---@param input_value string The value of the input box
+---@param selected boolean If the input box is still being edite or not
+function handle_name_input(obj, player_color, input_value, selected)
+  if selected == true then
+    return
+  end
+
+  set_object_name(input_value)
+  save_current_state()
+end
+
+function handle_move_base_click(obj, player, right_clicked) change_counter_by("base", "move", right_clicked) end
+function handle_attack_base_click(obj, player, right_clicked) change_counter_by("base", "attack", right_clicked) end
+function handle_range_base_click(obj, player, right_clicked) change_counter_by("base", "range", right_clicked) end
+function handle_shield_base_click(obj, player, right_clicked) change_counter_by("base", "shield", right_clicked) end
+function handle_retaliate_base_click(obj, player, right_clicked) change_counter_by("base", "retaliate", right_clicked) end
+function handle_retaliaterange_base_click(obj, player, right_clicked) change_counter_by("base", "retaliaterange", right_clicked) end
+
+function change_counter_by(which_group, which_counter, value)
   if type(value) == "boolean" then
     if value == true then
-      value = 1
+      value = -1
     else
-      value = 0
+      value = 1
     end
   end
 
-  COUNTERS[which_counter] = COUNTERS[which_counter] + value
+  COUNTERS[which_group][which_counter] = COUNTERS[which_group][which_counter] + value
+
+  -- now we need to update the two buttons {base, bonus}
+  local base_button_value = string.format("%d", COUNTERS.base[which_counter])
+  local total_value = COUNTERS.base[which_counter] + COUNTERS.bonus[which_counter]
+
+  local right_modifier = "+"
+  if COUNTERS.bonus[which_counter] < 0 then
+    right_modifier = ""
+  end
+  local bonus_button_value = string.format("%d (%db%s%d)", total_value, COUNTERS.base[which_counter], right_modifier, COUNTERS.bonus[which_counter])
+
+  local base_button_index = button_grouped_by_scope_to_index.base[which_counter]
+  local bonus_button_index = button_grouped_by_scope_to_index.bonus[which_counter]
+
+  self.editButton({
+    index = base_button_index - 1,
+    label = base_button_value,
+  })
+  self.editButton({
+    index = bonus_button_index - 1,
+    label = bonus_button_value,
+  })
+
+  save_current_state()
+end
+
+function refresh_labels()
+  for scope_name, scope_counters in pairs(COUNTERS) do
+    for counter_name, _ in pairs(scope_counters) do
+      change_counter_by(scope_name, counter_name, 0)
+    end
+  end
 end

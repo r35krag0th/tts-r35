@@ -1,0 +1,12 @@
+---@param s string any
+function split_by_underscore(s)
+  if s == nil then
+    error("split_by_underscore was called with a nil value")
+  end
+
+  local output = {}
+  for item in string.gmatch(s, "([^_]+)") do
+    table.insert(output, item)
+  end
+  return output
+end
