@@ -1,0 +1,533 @@
+-- vim: ft=lua
+
+MIN_VALUE = 0
+MAX_VALUE = 20
+CLICK_AGAIN_TO_CONFIRM = false
+
+OUTPUT_BUTTON_WIDTH = 350
+OUTPUT_BUTTON_FONT_SIZE = 300
+
+COLOR_WHITE = {1, 1, 1, 1}
+COLOR_BLACK = {0, 0, 0, 1}
+
+COLOR_AIR = {0.60, 0.69, 0.71}
+COLOR_AIR_HEX = "98b0b4"
+
+COLOR_DARK = {0.12, 0.16, 0.18}
+COLOR_DARK_HEX = "1f282f"
+
+COLOR_EARTH = {0.55, 0.65, 0.24}
+COLOR_EARTH_HEX = "8ca73e"
+
+COLOR_FIRE = {0.89, 0.26, 0.13}
+COLOR_FIRE_HEX = "e24220"
+
+COLOR_ICE = {0.33, 0.78, 0.94}
+COLOR_ICE_HEX = "54c8ef"
+
+COLOR_LIGHT = {0.93, 0.65, 0.06}
+COLOR_LIGHT_HEX = "eca50f"
+
+COLOR_GREEN = {0.36, 0.55, 0.35, 1.0}      -- 5B8C5A
+COLOR_GRAYISH = {0.93, 0.95, 0.94, 1.0}    -- E09F3E ?? EDF2EF
+
+-- Variables that are persisted to this object
+default_state = {
+  use_custom_assets = false,
+  gained_xp = 0,
+  elements = {
+    fire = false,
+    earth = false,
+    ice = false,
+    air = false,
+    light = false,
+    dark = false,
+  }
+}
+
+helper_state = {}
+
+-- List of element names used for iterating
+element_names = {
+  "earth",
+  "fire",
+  "air",
+  "ice",
+  "dark",
+  "light",
+}
+
+-- Lookup table for button IDs from programmatically generated buttons
+helper_button_index = {
+  earth = 0,
+  fire = 1,
+  air = 2,
+  ice = 3,
+  dark = 4,
+  light = 5,
+  xp = 6,
+  reset = 7,
+  settings_use_custom_assets = 8,
+}
+
+function title_case(str)
+  local buf = {}
+  for word in string.gmatch(str, "%S+") do
+    local first, rest = string.sub(word, 1, 1), string.sub(word, 2)
+    table.insert(buf, string.upper(first) .. string.lower(rest))
+  end
+  return table.concat(buf, " ")
+end
+
+function has_ui_asset(name, url)
+  for _, v in pairs(UI.getCustomAssets()) do
+    if v.name == name and v.url == url then
+      return true
+    end
+  end
+  return false
+end
+
+function add_asset_if_not_exists(t, name, url)
+  if has_ui_asset(name, url) then
+    return t
+  end
+
+  table.insert(t, {
+      name = name,
+      url = url,
+    })
+  return t
+end
+
+function load_custom_assets()
+  local assets = {}
+
+  -- Make sure we don't duplicate any of our own assets
+  assets = add_asset_if_not_exists(assets, "r35 GHEH Earth", "https://cdn.r35.net/gloomhaven-enhancement-stickers/images/element_earth.png")
+  assets = add_asset_if_not_exists(assets, "r35 GHEH Fire", "https://cdn.r35.net/gloomhaven-enhancement-stickers/images/element_fire.png")
+  assets = add_asset_if_not_exists(assets, "r35 GHEH Air", "https://cdn.r35.net/gloomhaven-enhancement-stickers/images/element_air.png")
+  assets = add_asset_if_not_exists(assets, "r35 GHEH Ice", "https://cdn.r35.net/gloomhaven-enhancement-stickers/images/element_ice.png")
+  assets = add_asset_if_not_exists(assets, "r35 GHEH Dark", "https://cdn.r35.net/gloomhaven-enhancement-stickers/images/element_dark.png")
+  assets = add_asset_if_not_exists(assets, "r35 GHEH Light", "https://cdn.r35.net/gloomhaven-enhancement-stickers/images/element_light.png")
+
+  -- Ensure that current UI Assets are added so that we don't lose them
+  for _, v in pairs(UI.getCustomAssets()) do
+    table.insert(assets, v)
+  end
+
+  -- Make sure we don't overwrite assets
+  UI.setCustomAssets(assets)
+end
+
+function onLoad(saved_data)
+  -- always start with the default state
+  helper_state = default_state
+
+  -- Load the persisted state for this object
+  if saved_data ~= "" then
+    local loaded_data = JSON.decode(saved_data)
+
+    -- When there are schema changes, this will address it in a "lossy" way
+    for k, v in pairs(default_state) do
+      if type(v) == "table" then
+        if helper_state[k] == nil then
+          helper_state[k] = {}
+        end
+
+        if loaded_data[k] == nil then
+          loaded_data[k] = {}
+        end
+
+        for kk, vv in pairs(v) do
+          if helper_state[k][kk] == nil then
+            helper_state[k][kk] = {}
+          end
+
+          if loaded_data[k][kk] == nil then
+            helper_state[k][kk] = vv
+          else
+            helper_state[k][kk] = loaded_data[k][kk]
+          end
+        end
+      else
+        if loaded_data[k] == nil then
+          helper_state[k] = v
+        else
+          helper_state[k] = loaded_data[k]
+        end
+      end
+    end
+  end
+
+  -- Mostly for debugging purposes
+  -- print_current_state()
+
+  -- Create the buttons on the custom object
+  create_all_buttons()
+
+  -- Apply the current state
+  apply_current_state()
+end
+
+function boolean_to_yesno(v)
+  if v == nil then
+    return "Null"
+  end
+
+  if v then
+    return "Yes"
+  end
+
+  return "No"
+end
+
+function print_current_state()
+  print("r35's Element Helper for Gloomhaven")
+  print("===================================")
+  print("Use Custom UI Assets? " .. boolean_to_yesno(helper_state.use_custom_assets))
+  print("Gained XP: " .. helper_state.gained_xp)
+  print("Elements:")
+  print("  [" .. COLOR_EARTH_HEX .. "]Earth[-] up? " .. boolean_to_yesno(helper_state.elements.earth))
+  print("  [" .. COLOR_FIRE_HEX .. "]Fire[-] up? " .. boolean_to_yesno(helper_state.elements.fire))
+  print("  [" .. COLOR_AIR_HEX .. "]Air[-] up? " .. boolean_to_yesno(helper_state.elements.air))
+  print("  [" .. COLOR_ICE_HEX .. "]Ice[-] up? " .. boolean_to_yesno(helper_state.elements.ice))
+  print("  [" .. COLOR_DARK_HEX .. "]Dark[-] up? " .. boolean_to_yesno(helper_state.elements.dark))
+  print("  [" .. COLOR_LIGHT_HEX .. "]Light[-] up? " .. boolean_to_yesno(helper_state.elements.light))
+end
+
+function apply_current_state()
+  -- print("[FFFF00]===== APPLY CURRENT STATE =====[-]")
+  update_gained_xp()
+
+  -- If we are using custom assets, then load them
+  if helper_state.use_custom_assets then
+    load_custom_assets()
+    self.editButton({
+      index = helper_button_index.settings_use_custom_assets,
+      color = COLOR_GREEN,
+      font_color = COLOR_WHITE,
+    })
+  else
+    self.editButton({
+      index = helper_button_index.settings_use_custom_assets,
+      color = COLOR_GRAYISH,
+      font_color = COLOR_BLACK,
+    })
+  end
+
+  -- Apply the current element states
+  for _, v in pairs(element_names) do
+    -- print("(apply_current_state) on element named -> " .. v)
+    set_element(v, helper_state.elements[v])
+  end
+
+  -- Ensure that the UI widgets (buttons/images) are correctly established
+  -- for _, v in pairs(element_names) do
+  --   local ui_button_id = "element" .. title_case(v)
+  --   local target_state = false
+  --   if helper_state.elements[v] == true and helper_state.use_custom_assets == false then
+  --     target_state = true
+  --   end
+  --   print("(apply_current_state) working on elements; v=" .. v .. "")
+  --
+  --   self.UI.setAttribute(
+  --     ui_button_id,
+  --     "active",
+  --     target_state
+  --   )
+  -- end
+end
+
+function save_current_state()
+  -- Save the current state for this object
+  saved_data = JSON.encode(helper_state)
+  self.script_state = saved_data
+end
+
+function do_nothing(_obj, _color, alt_click)
+  -- I do nothing
+end
+
+function create_all_buttons()
+  -- Programmatically create all the buttons for object's surface
+
+  -- COLUMN 1
+  self.createButton({
+    label=" ",
+    click_function="toggle_earth",
+    tooltip="Created Earth",
+    function_owner=self,
+    position={-1.0, 0.05, 1.0},
+    height=400,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color={0, 0, 0, 1},
+    color=COLOR_EARTH,
+    icon="r35 GHEH Earth",
+    iconWidth=32,
+    iconColor={1,1,1,1},
+  })
+
+  self.createButton({
+    label=" ",
+    click_function="toggle_fire",
+    tooltip="Created Fire",
+    function_owner=self,
+    position={-1.0, 0.05, -0.3},
+    height=400,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color={0, 0, 0, 1},
+    color=COLOR_FIRE,
+  })
+
+  -- COLUMN 2
+  self.createButton({
+    label=" ",
+    click_function="toggle_air",
+    tooltip="Created Air",
+    function_owner=self,
+    position={0, 0.05, 1.0},
+    height=400,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color={1, 1, 1, 1},
+    color=COLOR_AIR,
+  })
+
+  self.createButton({
+    label=" ",
+    click_function="toggle_ice",
+    tooltip="Created Ice",
+    function_owner=self,
+    position={0, 0.05, -0.3},
+    height=400,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color={1, 1, 1, 1},
+    color=COLOR_ICE,
+  })
+
+  -- COLUMN 3
+  self.createButton({
+    label=" ",
+    click_function="toggle_dark",
+    tooltip="Created Dark",
+    function_owner=self,
+    position={1, 0.05, 1.0},
+    height=400,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color=COLOR_WHITE,
+    color=COLOR_DARK,
+  })
+
+  self.createButton({
+    label=" ",
+    click_function="toggle_light",
+    tooltip="Created Light",
+    function_owner=self,
+    position={1, 0.05, -0.3},
+    height=400,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color=COLOR_BLACK,
+    color=COLOR_LIGHT,
+  })
+
+  -- XP
+  self.createButton({
+    label="9 XP",
+    click_function="handle_xp_add_subtract",
+    tooltip="XP",
+    function_owner=self,
+    position={-0.5, 0.05, -1.3},
+    height=200,
+    width=OUTPUT_BUTTON_WIDTH * 2,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE - 200,
+    font_color=COLOR_WHITE,
+    color=COLOR_BLACK,
+  })
+
+  -- Reset
+  self.createButton({
+    label="R",
+    click_function="handle_reset_button",
+    tooltip="XP",
+    function_owner=self,
+    position={1, 0.05, -1.3},
+    height=200,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE - 200,
+    font_color=COLOR_WHITE,
+    color={0.33, 0.04, 0.05, 1.0},
+  })
+
+  self.createButton({
+    label = "Use Custom Assets",
+    click_function = "handle_set_use_custom_assets",
+    function_owner = self,
+    alignment = 3,
+    position={0,-0.05,-1.2},
+    rotation={180,180,0},
+    height = 250,
+    width = 1000,
+    font_size = 100,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_color=COLOR_BLACK,
+    color = custom_assets_button_color,
+  })
+  update_gained_xp()
+end
+
+--
+-- Button Click Handlers
+--
+function handle_set_use_custom_assets(_obj, _color, alt_click)
+  -- Toggle the current state
+  helper_state.use_custom_assets = not helper_state.use_custom_assets
+
+  -- sync the current state to clean up UI widgets
+  apply_current_state()
+end
+
+function handle_reset_button(_obj, _color, alt_click)
+  if CLICK_AGAIN_TO_CONFIRM then
+    CLICK_AGAIN_TO_CONFIRM = false
+    broadcastToColor("[6699CC](r35.EH)[-] Reset complete!", _color)
+    self.editButton({
+        index = 7,
+        label = "R"
+      })
+
+    for _, v in pairs(element_names) do
+      set_element(v, false)
+    end
+
+    helper_state.gained_xp = 0
+    update_gained_xp()
+    save_current_state()
+
+    return
+  end
+
+  CLICK_AGAIN_TO_CONFIRM = true
+  broadcastToColor("[6699CC](r35.EH)[-] Quickly click the reset button again to confirm", _color)
+  self.editButton({
+      index = 7,
+      label = "RLY?"
+    })
+
+  Wait.frames(function()
+      CLICK_AGAIN_TO_CONFIRM = false
+      self.editButton({
+          index = 7,
+          label = "R"
+        })
+    end, 60)
+end
+
+function handle_xp_add_subtract(_obj, _color, alt_click)
+  mod = alt_click and -1 or 1
+  new_value = math.min(math.max(helper_state.gained_xp + mod, MIN_VALUE), MAX_VALUE)
+  if helper_state.gained_xp ~= new_value then
+    helper_state.gained_xp = new_value
+    update_gained_xp(_color)
+    save_current_state()
+  end
+end
+
+
+-- Element Toggle Handlers
+function toggle_earth() toggle_element("earth") end
+function toggle_fire() toggle_element("fire") end
+function toggle_ice() toggle_element("ice") end
+function toggle_air() toggle_element("air") end
+function toggle_dark() toggle_element("dark") end
+function toggle_light() toggle_element("light") end
+
+-- Simple "do I have it up" helpers
+function has_element(which_element) return helper_state.elements[which_element] == true end
+
+function set_element(which_element, new_state, auto_save)
+  -- print("--> [00FF00]set_element[-](" .. which_element .. ", new_state=" .. boolean_to_yesno(new_state) .. ", auto_save=" .. boolean_to_yesno(auto_save) .. ")")
+  -- if helper_state.elements[which_element] == nil or helper_state.elements[which_element] == new_state then
+  --   print("--- element is either null or the same as the previous state")
+  --   return
+  -- end
+  helper_state.elements[which_element] = new_state
+
+  -- update the UI
+  local ui_button_id = "element" .. title_case(which_element)
+  if helper_state.use_custom_assets then
+    -- set the ui asset button appropriate to the state
+    self.UI.setAttribute(
+      ui_button_id,
+      "active",
+      has_element(which_element)
+    )
+
+    -- we are using custom ui assets, the label should be blank
+    self.editButton({
+      index = helper_button_index[which_element],
+      label = " "
+    })
+  else
+    local new_label = " "
+    if new_state == true then
+      new_label = "X"
+    end
+
+    -- Set the new label appropriate to the state
+    self.editButton({
+        index = helper_button_index[which_element],
+        label = new_label,
+      })
+
+    -- not using custom ui assets; disable it
+    self.UI.setAttribute(
+      ui_button_id,
+      "active",
+      false
+    )
+  end
+
+  if auto_save ~= nil and type(auto_save) == "bool" and auto_save == true then
+    save_current_state()
+  end
+end
+
+function toggle_element(which_element)
+  if helper_state.elements[which_element] ~= nil then
+    -- Toggle the element's state and also auto save the new state
+    set_element(which_element, not helper_state.elements[which_element], true)
+  end
+end
+
+function update_gained_xp(_color)
+  self.editButton({
+      index = 6,
+      label = helper_state.gained_xp .. " XP",
+      tooltip = "",
+    })
+end
+
+function reset_val()
+end

@@ -1,0 +1,401 @@
+MIN_VALUE = 0
+MAX_VALUE = 9
+
+-- GOLD = F2DDA4 FFBE0B
+-- XP = 064789
+-- TRAP = 9E2B25
+GOLD_COLOR = {1.0, 0.75, 0.04, 1.0}
+XP_COLOR = {0.02, 0.28, 0.54, 1.0}
+TRAP_COLOR = {0.62, 0.17, 0.15, 1.0}
+OUTPUT_BUTTON_WIDTH = 350
+OUTPUT_BUTTON_FONT_SIZE = 300
+
+DIFF_COLOR_EASY = {0.36, 0.55, 0.35, 1.0}      -- 5B8C5A
+DIFF_COLOR_NORMAL = {0.93, 0.95, 0.94, 1.0}    -- E09F3E ?? EDF2EF
+-- DIFF_COLOR_HARD = {0.62, 0.16, 0.17, 1.0}      -- 9E2A2B
+DIFF_COLOR_HARD = {0.72, 0.43, 0.0, 1.0}
+DIFF_COLOR_VERY_HARD = {0.33, 0.04, 0.05, 1.0} -- 540B0E
+
+COLOR_WHITE = {1, 1, 1, 1}
+COLOR_BLACK = {0, 0, 0, 1}
+
+-- Variables that are persisted to this object
+light_mode = false
+tooltip_show = true
+val = 0
+difficulty_modifier = 0
+
+
+function compute_values(party_level, modifier)
+  modifier = modifier or 0
+
+  -- scenario level can't exceed 7, and can't be smaller than 0
+  eff_party_level = math.ceil(party_level / 2)
+  scenario_level = math.max(math.min(math.ceil(party_level / 2) + modifier, 9), 0)
+
+  gold_per_coin = 2
+  if scenario_level == 2 or scenario_level == 3 then
+      gold_per_coin = 3
+  elseif scenario_level == 4 or scenario_level == 5 then
+      gold_per_coin = 4
+  elseif scenario_level == 6 then
+      gold_per_coin = 5
+  elseif scenario_level == 7 then
+      gold_per_coin = 6
+  end
+
+  return {
+    party_level = party_level,
+    scenario_level = scenario_level,
+    difficulty_modifier = modifier,
+    monster_level = scenario_level,
+    gold_per_coin = gold_per_coin,
+    trap_damage = scenario_level + 2,
+    completion_xp = 4 + (scenario_level * 2),
+  }
+end
+
+function onload(saved_data)
+    if saved_data ~= "" then
+        local loaded_data = JSON.decode(saved_data)
+        light_mode = loaded_data[1]
+        val = loaded_data[2]
+        tooltip_show = loaded_data[3]
+        if loaded_data[4] != nil then
+          difficulty_modifier = loaded_data[4]
+        end
+    end
+
+    createAll()
+end
+
+function updateSave()
+    local data_to_save = {light_mode, val, tooltip_show, difficulty_modifier}
+    saved_data = JSON.encode(data_to_save)
+    self.script_state = saved_data
+end
+
+function do_nothing(_obj, _color, alt_click)
+end
+
+function createAll()
+    s_color = {0.5, 0.5, 0.5, 95}
+
+    if light_mode then
+        f_color = {0.9,0.9,0.9,95}
+    else
+        f_color = {0.1,0.1,0.1,100}
+    end
+
+    -- if tooltip_show then
+    --     ttText = "Scenario Level: " .. val
+    -- else
+    --     ttText = self.getName()
+    -- end
+
+    -- front side
+    self.createButton({
+      label=tostring(val),
+      click_function="add_subtract",
+      tooltip="Loading ...",
+      function_owner=self,
+      position={0,0.05,-0.6},
+      height=600,
+      width=1000,
+      alignment = 3,
+      scale={x=1.5, y=1.5, z=1.5},
+      font_size=800,
+      font_color=f_color,
+      color={0,0,0,0}
+      })
+
+    self.createButton({
+      label=" ",
+      click_function="do_nothing",
+      tooltip="Gold per Coin",
+      function_owner=self,
+      position={-1.0, 0.05, 1.0},
+      height=400,
+      width=OUTPUT_BUTTON_WIDTH,
+      alignment=3,
+      scale={x=1.5, y=1.5, z=1.5},
+      font_size=OUTPUT_BUTTON_FONT_SIZE,
+      font_color={0, 0, 0, 1},
+      color=GOLD_COLOR,
+    })
+
+    self.createButton({
+      label=" ",
+      click_function="do_nothing",
+      tooltip="Trap Damage",
+      function_owner=self,
+      position={0, 0.05, 1.0},
+      height=400,
+      width=OUTPUT_BUTTON_WIDTH,
+      alignment=3,
+      scale={x=1.5, y=1.5, z=1.5},
+      font_size=OUTPUT_BUTTON_FONT_SIZE,
+      font_color={1, 1, 1, 1},
+      color=TRAP_COLOR,
+    })
+
+    self.createButton({
+      label=" ",
+      click_function="do_nothing",
+      tooltip="Trap Damage",
+      function_owner=self,
+      position={1, 0.05, 1.0},
+      height=400,
+      width=OUTPUT_BUTTON_WIDTH,
+      alignment=3,
+      scale={x=1.5, y=1.5, z=1.5},
+      font_size=OUTPUT_BUTTON_FONT_SIZE,
+      font_color={1, 1, 1, 1},
+      color=XP_COLOR,
+    })
+
+    -- backside buttons
+    -- X = Left/Right
+    -- Y = Up/Down (Vertical Axis)
+    -- Z = Forward/Backwards
+    backside_button_params = {
+      label = "easy",
+      click_function = "setDifficultyToEasy",
+      function_owner = self,
+      alignment = 3,
+      position={0,-0.05,-1.2},
+      rotation={180,180,0},
+      height = 250,
+      width = 1000,
+      font_size = 200,
+      scale={x=1.5, y=1.5, z=1.5},
+      font_color=COLOR_WHITE,
+      color = DIFF_COLOR_EASY,
+    }
+    backside_button_spacing = 0.8
+    self.createButton(backside_button_params)
+
+    backside_button_params.label = "normal"
+    backside_button_params.click_function = "setDifficultyToNormal"
+    backside_button_params.position[3] = backside_button_params.position[3] + backside_button_spacing
+    backside_button_params.color = DIFF_COLOR_NORMAL
+    backside_button_params.font_color = COLOR_BLACK
+    self.createButton(backside_button_params)
+
+    backside_button_params.label = "hard"
+    backside_button_params.click_function = "setDifficultyToHard"
+    backside_button_params.position[3] = backside_button_params.position[3] + backside_button_spacing
+    backside_button_params.color = DIFF_COLOR_HARD
+    backside_button_params.font_color = COLOR_WHITE
+    self.createButton(backside_button_params)
+
+    backside_button_params.label = "very hard"
+    backside_button_params.click_function = "setDifficultyToVeryHard"
+    backside_button_params.position[3] = backside_button_params.position[3] + backside_button_spacing
+    backside_button_params.color = DIFF_COLOR_VERY_HARD
+    backside_button_params.font_color = COLOR_WHITE
+    self.createButton(backside_button_params)
+
+    -- setTooltips()
+    updateVal()
+end
+
+function set_difficulty(new_modifier, _color)
+  if new_modifier < -1 then
+    new_modifier = -1
+  end
+
+  if new_modifier > 2 then
+    new_modifier = 2
+  end
+
+  if new_modifier == difficulty_modifier then
+    return
+  end
+
+  difficulty_modifier = new_modifier
+  updateVal()
+  updateSave()
+end
+
+function setDifficultyToEasy(_obj, _color_)
+  set_difficulty(-1)
+end
+
+function setDifficultyToNormal()
+  set_difficulty(0)
+end
+
+function setDifficultyToHard()
+  set_difficulty(1)
+end
+
+function setDifficultyToVeryHard()
+  set_difficulty(2)
+end
+
+function removeAll()
+    self.removeInput(0)
+    self.removeButton(0)
+    self.removeButton(1)
+    self.removeButton(2)
+    self.removeButton(3)
+    -- TODO: Add removals for the additional buttons here; why doesn't this just
+    --       use the self.getButtons() API?
+end
+
+function reloadAll()
+    removeAll()
+    createAll()
+    -- setTooltips()
+    updateVal()
+    updateSave()
+end
+
+function swap_fcolor(_obj, _color, alt_click)
+    light_mode = not light_mode
+    reloadAll()
+end
+
+function swap_align(_obj, _color, alt_click)
+    center_mode = not center_mode
+    reloadAll()
+end
+
+function swap_tooltip(_obj, _color, alt_click)
+    tooltip_show = not tooltip_show
+    reloadAll()
+    -- setTooltips()
+end
+
+function editName(_obj, _string, value)
+    self.setName(value)
+    -- setTooltips()
+end
+
+function add_subtract(_obj, _color, alt_click)
+    mod = alt_click and -1 or 1
+    new_value = math.min(math.max(val + mod, MIN_VALUE), MAX_VALUE)
+    if val ~= new_value then
+        val = new_value
+        updateVal(_color)
+        -- updateExtraVals()
+        updateSave()
+    end
+end
+
+function updateExtraVals()
+    local new_values = compute_values(val, difficulty_modifier)
+
+    -- 4 = gold/Coin
+    -- 5 = trap Damage
+    -- 6 = completion xp
+    self.editButton({
+      index = 1,
+      label = tostring(new_values.gold_per_coin),
+      tooltip = "Each coin is worth [b][FFBE0B]" .. tostring(new_values.gold_per_coin) .. " gold[-][/b]",
+    })
+    self.editButton({
+      index = 2,
+      label = tostring(new_values.trap_damage),
+      tooltip = "Traps are [b][FF0000]" .. tostring(new_values.trap_damage) .. " damage[-][/b]",
+    })
+    self.editButton({
+      index = 3,
+      label = tostring(new_values.completion_xp),
+      tooltip = "Completing a scenario is worth [b][6699CC]" .. tostring(new_values.completion_xp) .. " XP[-][/b]",
+    })
+end
+
+function difficulty_modifier_to_name(modifier)
+  if modifier == -1 then
+    return "easy"
+  elseif modifier == 0 then
+    return "normal"
+  elseif modifier == 1 then
+    return "hard"
+  elseif modifier == 2 then
+    return "very hard"
+  else
+    return "unknown (" .. modifier .. ")"
+  end
+end
+
+function updateVal(_color)
+  local new_values = compute_values(val, difficulty_modifier)
+
+  gold_tooltip = "Each coin is worth [FFBE0B]" .. tostring(new_values.gold_per_coin) .. " gold[-]"
+  trap_tooltip = "Traps are [FF0000]" .. tostring(new_values.trap_damage) .. " damage[-]"
+  xp_tooltip = "Completing a scenario is worth [6699CC]" .. tostring(new_values.completion_xp) .. " XP[-]"
+
+  ttText = "Party Level ➜ " .. new_values.party_level
+  ttText = ttText .. "\nScenario Level ➜ " .. new_values.scenario_level
+  ttText = ttText .. "\nMonster Level ➜ " .. new_values.monster_level
+  ttText = ttText .. "\nDifficulty ➜ " .. difficulty_modifier_to_name(difficulty_modifier) .. ""
+  ttText = ttText .. "\n\n"
+  ttText = ttText .. "\n" .. gold_tooltip
+  ttText = ttText .. "\n" .. trap_tooltip
+  ttText = ttText .. "\n" .. xp_tooltip
+
+  new_color = COLOR_BLACK
+  if difficulty_modifier == -1 then
+    new_color = DIFF_COLOR_EASY
+  elseif difficulty_modifier == 1 then
+    new_color = DIFF_COLOR_HARD
+  elseif difficulty_modifier == 2 then
+    new_color = DIFF_COLOR_VERY_HARD
+  end
+  if _color != nil then
+    -- message, color, text_color (table)
+    broadcastToColor("[6699CC](r35.GHSLH)[-] Average Mercenary Level is now [e76f51]" .. new_values.party_level .. "[-]", _color)
+  end
+  self.setColorTint(new_color)
+  self.editButton({
+    index = 0,
+    label = tostring(val),
+    tooltip = ttText,
+  })
+
+  self.editButton({
+    index = 1,
+    label = tostring(new_values.gold_per_coin),
+    tooltip = gold_tooltip,
+  })
+  self.editButton({
+    index = 2,
+    label = tostring(new_values.trap_damage),
+    tooltip = trap_tooltip
+  })
+  self.editButton({
+    index = 3,
+    label = tostring(new_values.completion_xp),
+    tooltip = xp_tooltip,
+  })
+end
+
+function reset_val()
+    val = 0
+    updateVal()
+    updateSave()
+end
+
+-- function setTooltips()
+--     if tooltip_show then
+--         ttText = "Scenario Level: " .. val
+--     else
+--         ttText = self.getName()
+--     end
+--
+--     self.editButton({
+--         index = 0,
+--         value = tostring(val),
+--         tooltip = ttText
+--         })
+-- end
+
+function null()
+end
+
+-- function keepSample(_obj, _string, value)
+--     reloadAll()
+-- end
