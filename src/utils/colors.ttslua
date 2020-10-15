@@ -1,0 +1,30 @@
+COLOR_WHITE = { 1.00, 1.00, 1.00, 1.00 }
+COLOR_BLACK = { 0.00, 0.00, 0.00, 1.00 }
+COLOR_INVISIBLE = { 0.00, 0.00, 0.00, 0.00 }
+
+function hex_color_to_rgba(hex, alpha)
+  alpha = alpha or 1
+  hex = hex:gsub("#", "")
+
+  return rgba_255_to_rgba_1(
+    tonumber("0x" .. hex:sub(1, 2), 16),
+    tonumber("0x" .. hex:sub(3, 4), 16),
+    tonumber("0x" .. hex:sub(5, 6), 16),
+    alpha
+  )
+end
+
+function rgba_255_to_rgba_1(red, green, blue, alpha)
+  alpha = alpha or 1
+
+  if alpha > 1 then
+    alpha  = alpha / 255
+  end
+
+  return Color(
+    red / 255,
+    green / 255,
+    blue / 255,
+    alpha
+  )
+end

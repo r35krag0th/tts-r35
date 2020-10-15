@@ -1,0 +1,420 @@
+-- Using a Custom object
+-- ==================================================
+-- >>> Mesh: https://paste.ee/r/PRFre
+-- >>> Diff/Image: http://i.imgur.com/ygviq8X.png
+-- >>> Normal/Bump: http://i.imgur.com/rx9djm1.png
+
+-- Include split_by_colon
+#include tts-r35/src/utils/split_by_colon
+
+-- Include split_by_comma
+#include tts-r35/src/utils/split_by_comma
+
+-- The maintained state
+CELL_VALUES = {
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+}
+
+BUTTON_COLORS = {}
+
+button_index_to_button = {}
+button_label_to_index = {}
+
+function onLoad(save_state)
+    local button_params = {
+        label = ":)",
+        tooltip = "Click to Toggle",
+        click_function = "do_nothing",
+        function_owner = self,
+        position = {
+            x = -3,
+            y = 0.1,
+            z = -4,
+        },
+        rotation = {
+            x = 0,
+            y = 0,
+            z = 0,
+        },
+        height = 100,
+        width = 900,
+        alignment = 3,
+        color = {
+            r = 0,
+            g = 0,
+            b = 0,
+            a = 1,
+        },
+        font_color = {
+            r = 1,
+            g = 1,
+            b = 1,
+            a = 0,
+        },
+        font_size = 100,
+        hover_color = {
+            r = 0.89,
+            g = 0.74,
+            b = 0.52,
+        },
+        press_color = {
+            r = 0.55,
+            g = 0.65,
+            b = 0.24,
+        }
+    }
+
+    -- i => row
+    for i=0,4 do
+        -- j => column
+        for j=0,3 do
+            -- local cell_id = (i - 1) * 4 + (j - 1)
+            local cell_id = i * 4 + j
+            if i >= 4 then
+                cell_id = cell_id - 4
+            end
+
+            button_params.rotation.y = 0
+            button_params.position.z = -4 + (2 * i)
+            button_params.position.x = -3 + (2 * j)
+            button_params.label = "H" .. i .. "-" .. j
+            button_params.click_function = "handle_H" .. i .. "" .. j
+            self.createButton(button_params)
+
+            button_params.position.z = -3 + (2 * j)
+            button_params.position.x = -4 + (2 * i)
+            button_params.rotation.y = 90
+            button_params.label = "V" .. j .. "-" .. i
+            button_params.click_function = "handle_V" .. j .. "" .. i
+            self.createButton(button_params)
+        end
+    end
+
+    -- collect buttons and their indices
+    for button_index, button_obj in pairs(self.getButtons()) do
+        button_index_to_button[button_index] = button_obj
+        button_label_to_index[button_obj.label] = button_index
+    end
+
+    if save_state ~= nil and save_state ~= "" then
+      load_state(save_state)
+    end
+
+    -- Create the reset button on the back
+    self.createButton({
+      label = "Reset",
+      click_function = "handle_reset_button",
+      function_owner = self,
+      alignment = 3,
+      position={0, -0.15, 0},
+      rotation={180,180,0},
+      height = 1000,
+      width = 1000,
+      font_size = 200,
+      scale = {x=1, y=1, z=1},
+      font_color = {1, 1, 1, 1},
+      color = {0.33, 0.04, 0.05, 1.0},
+    })
+
+    save_current_state()
+end
+
+function reset_state()
+  CELL_VALUES = {
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+  }
+  BUTTON_COLORS = {}
+  save_current_state()
+  load_state(self.script_state)
+end
+
+function load_state(save_state)
+  local save_state_obj
+  if save_state[1] ~= "{" then
+    save_state_obj = {
+      cell_values = "",
+      button_colors = {},
+    }
+  end
+
+  save_state_obj = JSON.decode(save_state)
+  if type(save_state_obj) == "number" then
+    return
+  end
+
+  if save_state_obj.cell_values == nil then
+    save_state_obj.cell_values = ""
+  end
+
+  if save_state_obj.button_colors == nil then
+    save_state_obj.button_colors = {}
+  end
+
+  CELL_VALUES = {
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0
+  }
+  for _, v in pairs(split_by_comma(save_state_obj.cell_values)) do
+      local parts = split_by_colon(v)
+      CELL_VALUES[tonumber(parts[1])] = tonumber(parts[2])
+  end
+
+  for button_label, _ in pairs(button_label_to_index) do
+    local button_color = save_state_obj.button_colors[button_label]
+    if button_color == nil then
+      button_color = {0, 0, 0, 1}
+    end
+    set_button_color_by_label(button_label, button_color, {0, 0, 0, 0})
+  end
+
+  -- for button_label, button_color in pairs(save_state_obj.button_colors) do
+  --   set_button_color_by_label(button_label, button_color, {0, 0, 0, 0})
+  -- end
+end
+
+function save_current_state()
+    local output = ""
+    for i, v in pairs(CELL_VALUES) do
+        if output ~= "" then
+            output = output .. ","
+        end
+        output = string.format("%s%d:%d", output, i, v)
+    end
+
+    self.script_state = JSON.encode({
+      cell_values = output,
+      button_colors = BUTTON_COLORS
+    })
+end
+
+function do_nothing(obj, color, alt_click)
+    log(obj, "Glyph Button", "glyph_button")
+end
+
+function test_flag(set, flag)
+    return set % (2 * flag) >= flag
+end
+
+function set_flag(set, flag)
+    if test_flag(set, flag) then
+        return set
+    end
+    return set + flag
+end
+
+function clear_flag(set, flag)
+    if test_flag(set, flag) then
+        return set - flag
+    end
+    return set
+end
+
+function row_letter_to_number(v)
+    if v == "A" then return 0 end
+    if v == "B" then return 1 end
+    if v == "C" then return 2 end
+    if v == "D" then return 3 end
+    error("Row letter is not valid.")
+end
+
+function toggle_bit_by_cell_id(cell_id, bit, label, alt_color)
+    -- because lua is 1-based arrays :/
+    cell_id = cell_id + 1
+    alt_color = alt_color or false
+
+    if test_flag(CELL_VALUES[cell_id], bit) then
+        CELL_VALUES[cell_id] = clear_flag(CELL_VALUES[cell_id], bit)
+        if label ~= nil then
+            set_button_color_by_label(label, {0, 0, 0, 1}, {1, 1, 1, 0})
+        end
+    else
+        CELL_VALUES[cell_id] = set_flag(CELL_VALUES[cell_id], bit)
+        if label ~= nil then
+            if alt_color then
+                set_button_color_by_label(label, {0.96, 0.39, 0.11}, {0, 0, 0, 0})
+            else
+                set_button_color_by_label(label, {0, 1, 0, 1}, {0, 0, 0, 0})
+            end
+
+        end
+    end
+
+    save_current_state()
+end
+
+function set_button_color_by_label(label, color, font_color)
+    local index = button_label_to_index[label] - 1
+    local button = button_index_to_button[index]
+
+    if color == nil then
+        color = button.color
+    end
+
+    if font_color == nil then
+        font_color = button.font_color
+    end
+
+    BUTTON_COLORS[label] = color
+
+    self.editButton({
+        index = index,
+        color = color,
+        font_color = font_color,
+    })
+end
+
+-- Row 1
+
+function handle_reset_button(o, c, a)
+  reset_state()
+end
+
+function handle_H00(o, c, a)
+    toggle_bit_by_cell_id(0, 2, "H0-0", a)
+end
+
+function handle_H01(o, c, a) toggle_bit_by_cell_id(1, 2, "H0-1", a) end
+function handle_H02(o, c, a) toggle_bit_by_cell_id(2, 2, "H0-2", a) end
+function handle_H03(o, c, a) toggle_bit_by_cell_id(3, 2, "H0-3", a) end
+
+function handle_V00(o, c, a) toggle_bit_by_cell_id(0, 1, "V0-0", a) end
+function handle_V01(o, c, a)
+    toggle_bit_by_cell_id(0, 4, "V0-1", a)
+    toggle_bit_by_cell_id(1, 1, "V0-1", a)
+end
+function handle_V02(o, c, a)
+    toggle_bit_by_cell_id(1, 4, "V0-2", a)
+    toggle_bit_by_cell_id(2, 1, "V0-2", a)
+end
+function handle_V03(o, c, a)
+    toggle_bit_by_cell_id(2, 4, "V0-3", a)
+    toggle_bit_by_cell_id(3, 1, "V0-3", a)
+end
+function handle_V04(o, c, a)
+    toggle_bit_by_cell_id(3, 4, "V0-4", a)
+end
+
+-- Row 2
+function handle_H10(o, c, a)
+    toggle_bit_by_cell_id(0, 8, "H1-0", a)
+    toggle_bit_by_cell_id(4, 2, "H1-0", a)
+end
+function handle_H11(o, c, a)
+    toggle_bit_by_cell_id(1, 8, "H1-1", a)
+    toggle_bit_by_cell_id(5, 2, "H1-1", a)
+end
+function handle_H12(o, c, a)
+    toggle_bit_by_cell_id(2, 8, "H1-2", a)
+    toggle_bit_by_cell_id(6, 2, "H1-2", a)
+end
+function handle_H13(o, c, a)
+    toggle_bit_by_cell_id(3, 8, "H1-3", a)
+    toggle_bit_by_cell_id(7, 2, "H1-3", a)
+end
+
+function handle_V10(o, c, a) toggle_bit_by_cell_id(4, 1, "V1-0", a) end
+function handle_V11(o, c, a)
+    toggle_bit_by_cell_id(4, 4, "V1-1", a)
+    toggle_bit_by_cell_id(5, 1, "V1-1", a)
+end
+function handle_V12(o, c, a)
+    toggle_bit_by_cell_id(5, 4, "V1-2", a)
+    toggle_bit_by_cell_id(6, 1, "V1-2", a)
+end
+function handle_V13(o, c, a)
+    toggle_bit_by_cell_id(6, 4, "V1-3", a)
+    toggle_bit_by_cell_id(7, 1, "V1-3", a)
+end
+function handle_V14(o, c, a)
+    toggle_bit_by_cell_id(7, 4, "V1-4", a)
+end
+
+-- Row 3
+function handle_H20(o, c, a)
+    toggle_bit_by_cell_id(4, 8, "H2-0", a)
+    toggle_bit_by_cell_id(8, 2, "H2-0", a)
+end
+function handle_H21(o, c, a)
+    toggle_bit_by_cell_id(5, 8, "H2-1", a)
+    toggle_bit_by_cell_id(9, 2, "H2-1", a)
+end
+function handle_H22(o, c, a)
+    toggle_bit_by_cell_id(6, 8, "H2-2", a)
+    toggle_bit_by_cell_id(10, 2, "H2-2", a)
+end
+function handle_H23(o, c, a)
+    toggle_bit_by_cell_id(7, 8, "H2-3", a)
+    toggle_bit_by_cell_id(11, 2, "H2-3", a)
+end
+
+function handle_V20(o, c, a) toggle_bit_by_cell_id(8, 1, "V2-0", a) end
+function handle_V21(o, c, a)
+    toggle_bit_by_cell_id(8, 4, "V2-1", a)
+    toggle_bit_by_cell_id(9, 1, "V2-1", a)
+end
+function handle_V22(o, c, a)
+    -- cell 5, 6
+    toggle_bit_by_cell_id(9, 4, "V2-2", a)
+    toggle_bit_by_cell_id(10, 1, "V2-2", a)
+end
+function handle_V23(o, c, a)
+    -- cell 6, 7
+    toggle_bit_by_cell_id(10, 4, "V2-3", a)
+    toggle_bit_by_cell_id(11, 1, "V2-3", a)
+end
+function handle_V24(o, c, a)
+    -- cell 7
+    toggle_bit_by_cell_id(11, 4, "V2-4", a)
+end
+
+-- Row 4
+function handle_H30(o, c, a)
+    toggle_bit_by_cell_id(8, 8, "H3-0", a)
+    toggle_bit_by_cell_id(12, 2, "H3-0", a)
+end
+function handle_H31(o, c, a)
+    toggle_bit_by_cell_id(9, 8, "H3-1", a)
+    toggle_bit_by_cell_id(13, 2, "H3-1", a)
+end
+function handle_H32(o, c, a)
+    toggle_bit_by_cell_id(10, 8, "H3-2", a)
+    toggle_bit_by_cell_id(14, 2, "H3-2", a)
+end
+function handle_H33(o, c, a)
+    toggle_bit_by_cell_id(11, 8, "H3-3", a)
+    toggle_bit_by_cell_id(15, 2, "H3-3", a)
+end
+
+function handle_V30(o, c, a) toggle_bit_by_cell_id(12, 1, "V3-0", a) end
+function handle_V31(o, c, a)
+    toggle_bit_by_cell_id(12, 4, "V3-1", a)
+    toggle_bit_by_cell_id(13, 1, "V3-1", a)
+end
+function handle_V32(o, c, a)
+    -- cell 5, 6
+    toggle_bit_by_cell_id(13, 4, "V3-2", a)
+    toggle_bit_by_cell_id(14, 1, "V3-2", a)
+end
+function handle_V33(o, c, a)
+    -- cell 6, 7
+    toggle_bit_by_cell_id(14, 4, "V3-3", a)
+    toggle_bit_by_cell_id(15, 1, "V3-3", a)
+end
+function handle_V34(o, c, a)
+    -- cell 7
+    toggle_bit_by_cell_id(15, 4, "V3-4", a)
+end
+
+-- Bottom of Row 4
+function handle_H40(o, c, a) toggle_bit_by_cell_id(12, 8, "H4-0", a) end
+function handle_H41(o, c, a) toggle_bit_by_cell_id(13, 8, "H4-1", a) end
+function handle_H42(o, c, a) toggle_bit_by_cell_id(14, 8, "H4-2", a) end
+function handle_H43(o, c, a) toggle_bit_by_cell_id(15, 8, "H4-3", a) end

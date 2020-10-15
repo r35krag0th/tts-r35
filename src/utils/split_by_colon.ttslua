@@ -1,0 +1,11 @@
+function split_by_colon(s)
+  if s == nil then
+    error("split_by_comma was called with a nil value")
+  end
+
+  local output = {}
+  for item in string.gmatch(s, "([^:]+)") do
+    table.insert(output, item)
+  end
+  return output
+end

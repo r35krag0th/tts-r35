@@ -1,0 +1,227 @@
+-- Gloomhaven Attack Helper
+#include tts-r35/src/utils/colors
+
+-- >>> Custom Token Image: https://cdn.r35.net/tts-modding/objects/rounded-squares/Gloomhaven-Attack-Helper-v2.png
+--
+-- TODO: Wire up the bottom side "base" values, which are essentially mirroring the top side.
+--        > it may be worth functionalizing this such that we can just change the Y-offset
+--        > so we don't have to literally duplicate all 6 buttons.
+
+
+OUTPUT_BUTTON_WIDTH = 550
+OUTPUT_BUTTON_FONT_SIZE = 200
+OUTPUT_BUTTON_HEIGHT = 300
+OUTPUT_BUTTON_Y_OFFSET = 0.05
+
+COLOR_WHITE = {1, 1, 1, 1}
+COLOR_BLACK = {0, 0, 0, 1}
+
+COLOR_AIR = {0.60, 0.69, 0.71}
+COLOR_AIR_HEX = "98b0b4"
+
+COLOR_DARK = {0.12, 0.16, 0.18}
+COLOR_DARK_HEX = "1f282f"
+
+COLOR_EARTH = {0.55, 0.65, 0.24}
+COLOR_EARTH_HEX = "8ca73e"
+
+COLOR_FIRE = {0.89, 0.26, 0.13}
+COLOR_FIRE_HEX = "e24220"
+
+COLOR_ICE = {0.33, 0.78, 0.94}
+COLOR_ICE_HEX = "54c8ef"
+
+COLOR_LIGHT = {0.93, 0.65, 0.06}
+COLOR_LIGHT_HEX = "eca50f"
+
+COLOR_GREEN = {0.36, 0.55, 0.35, 1.0}      -- 5B8C5A
+COLOR_GRAYISH = {0.93, 0.95, 0.94, 1.0}    -- E09F3E ?? EDF2EF
+
+COLORS = {
+  move = hex_color_to_rgba("7cb07a"),
+  attack = hex_color_to_rgba("eb593c"),
+  range = hex_color_to_rgba("fcd554"),
+  shield = hex_color_to_rgba("da8c5d"),
+  retaliate = hex_color_to_rgba("73dadb")
+}
+
+COUNTERS = {
+  move = 0,
+  attack = 0,
+  range = 0,
+  shield = 0,
+  retaliate = 0,
+  retaliate_range = 0,
+}
+
+function onLoad(saved_data)
+  create_all_buttons()
+end
+
+function create_all_buttons()
+  -- Programmatically create all the buttons for object's surface
+
+  -- COLUMN 1
+  self.createButton({
+    label="1 (+1)",
+    click_function="handle_shield_bonus_click",
+    -- tooltip="Created Earth",
+    function_owner=self,
+    position={x = -1.40, y = OUTPUT_BUTTON_Y_OFFSET, z = 0.75},
+    height=OUTPUT_BUTTON_HEIGHT,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    -- scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color={0, 0, 0, 1},
+    color=COLORS.shield,
+    icon="r35 GHEH Earth",
+    iconWidth=32,
+    iconColor={1,1,1,1},
+  })
+
+  self.createButton({
+    label="Mv",
+    click_function="handle_move_bonus_click",
+    tooltip="Created Fire",
+    function_owner=self,
+    position={x = -1.40, y = OUTPUT_BUTTON_Y_OFFSET, z = -0.1},
+    height=OUTPUT_BUTTON_HEIGHT,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    -- scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color={0, 0, 0, 1},
+    color=COLORS.move,
+  })
+
+  -- COLUMN 2
+  self.createButton({
+    label="Ret",
+    click_function="handle_retaliate_bonus_click",
+    -- tooltip="Created Air",
+    function_owner=self,
+    position={x = 0.2, y = OUTPUT_BUTTON_Y_OFFSET, z = 0.75},
+    height=OUTPUT_BUTTON_HEIGHT,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    -- scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color={1, 1, 1, 1},
+    color=COLORS.retaliate,
+  })
+
+  self.createButton({
+    label="Atk",
+    click_function="handle_attack_bonus_click",
+    -- tooltip="Created Ice",
+    function_owner=self,
+    position={x = 0.2, y = OUTPUT_BUTTON_Y_OFFSET, z = -0.1},
+    height=OUTPUT_BUTTON_HEIGHT,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    -- scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color={1, 1, 1, 1},
+    color=COLORS.attack,
+  })
+
+  -- COLUMN 3
+  self.createButton({
+    label="RetR",
+    click_function="handle_retaliate_range_bonus_click",
+    -- tooltip="Created Dark",
+    function_owner=self,
+    position={x = 1.7, y = OUTPUT_BUTTON_Y_OFFSET, z = 0.75},
+    height=OUTPUT_BUTTON_HEIGHT,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    -- scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color=COLOR_WHITE,
+    color=COLORS.retaliate,
+  })
+
+  self.createButton({
+    label="Rng",
+    click_function="handle_range_bonus_click",
+    -- tooltip="Created Light",
+    function_owner=self,
+    position={1.85, OUTPUT_BUTTON_Y_OFFSET, -0.1},
+    height=OUTPUT_BUTTON_HEIGHT,
+    width=OUTPUT_BUTTON_WIDTH,
+    alignment=3,
+    -- scale={x=1.5, y=1.5, z=1.5},
+    font_size=OUTPUT_BUTTON_FONT_SIZE,
+    font_color=COLOR_BLACK,
+    color=COLORS.range,
+  })
+
+  -- XP
+  self.createButton({
+    label="Bandit Archer",
+    click_function="do_nothing",
+    tooltip="",
+    function_owner=self,
+    position={0, OUTPUT_BUTTON_Y_OFFSET, -0.83},
+    height=200,
+    width=1500,
+    alignment=3,
+    scale={x=1.5, y=1.5, z=1.5},
+    font_size=100,
+    font_color=COLOR_WHITE,
+    color=COLOR_BLACK,
+  })
+
+  -- Reset
+  -- self.createButton({
+  --   label="R",
+  --   click_function="handle_reset_button",
+  --   tooltip="XP",
+  --   function_owner=self,
+  --   position={1, 0.05, -1.3},
+  --   height=200,
+  --   width=OUTPUT_BUTTON_WIDTH,
+  --   alignment=3,
+  --   scale={x=1.5, y=1.5, z=1.5},
+  --   font_size=OUTPUT_BUTTON_FONT_SIZE - 200,
+  --   font_color=COLOR_WHITE,
+  --   color={0.33, 0.04, 0.05, 1.0},
+  -- })
+
+  -- self.createButton({
+  --   label = "Use Custom Assets",
+  --   click_function = "handle_set_use_custom_assets",
+  --   function_owner = self,
+  --   alignment = 3,
+  --   position={0,-0.05,-1.2},
+  --   rotation={180,180,0},
+  --   height = 250,
+  --   width = 1000,
+  --   font_size = 100,
+  --   scale={x=1.5, y=1.5, z=1.5},
+  --   font_color=COLOR_BLACK,
+  --   color = custom_assets_button_color,
+  -- })
+end
+
+function do_nothing(o, p, right_clicked) end
+
+function handle_move_bonus_click(obj, player, right_clicked) change_counter_by("move", right_clicked) end
+function handle_attack_bonus_click(obj, player, right_clicked) change_counter_by("attack", right_clicked) end
+function handle_range_bonus_click(obj, player, right_clicked) change_counter_by("range", right_clicked) end
+function handle_shield_bonus_click(obj, player, right_clicked) change_counter_by("shield", right_clicked) end
+function handle_retaliate_bonus_click(obj, player, right_clicked) change_counter_by("retaliate", right_clicked) end
+function handle_retaliate_range_bonus_click(obj, player, right_clicked) change_counter_by("retaliate_range", right_clicked) end
+
+function change_counter_by(which_counter, value)
+  if type(value) == "boolean" then
+    if value == true then
+      value = 1
+    else
+      value = 0
+    end
+  end
+
+  COUNTERS[which_counter] = COUNTERS[which_counter] + value
+end
