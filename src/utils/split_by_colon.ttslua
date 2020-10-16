@@ -1,3 +1,11 @@
+-- vim: ft=lua
+
+----- String Utilities
+
+--- Split a string by colon
+--
+-- @param s string The string to split
+-- @return table of string fragments
 function split_by_colon(s)
   if s == nil then
     error("split_by_comma was called with a nil value")

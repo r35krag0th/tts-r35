@@ -1,4 +1,7 @@
--- Gloomhaven Attack Helper
+----- Gloomhaven Attack Helper
+
+--- The Attack helper is a simple little object to help
+-- compute the final values for a monster's abilities
 -- >>> Custom Token Image: https://cdn.r35.net/tts-modding/objects/rounded-squares/Gloomhaven-Attack-Helper-v2.png
 
 ATTACK_HELPER_CUSTOM_TOKEN_IMAGE = "https://cdn.r35.net/tts-modding/objects/rounded-squares/Gloomhaven-Attack-Helper-v2.png"
@@ -51,6 +54,8 @@ button_grouped_by_scope_to_index = {
   name = nil,
 }
 
+--- Called when the object is being loaded by TTS
+-- @param saved_data string
 function onLoad(saved_data)
   if saved_data ~= nil and saved_data ~= "" then
     local deserialized = JSON.decode(saved_data)
@@ -92,6 +97,7 @@ function onLoad(saved_data)
   self.setDescription("Backed by r35 CDN\n[b]Version:[/b] " .. ATTACK_HELPER_VERSION)
 end
 
+--- Save the object's current state
 function save_current_state()
   local save_state_structure = {
     COUNTERS = COUNTERS,
@@ -100,6 +106,7 @@ function save_current_state()
   self.script_state = JSON.encode(save_state_structure)
 end
 
+--- Set the object's name, or a sane default
 function set_object_name(new_name)
   if new_name == nil or new_name == "" then
     new_name = "No Name"
@@ -114,6 +121,14 @@ function set_object_name(new_name)
   })
 end
 
+--- Create a button set!
+--
+-- This will dynamically create the six buttons for top or bottom
+-- the top vs bottom is determined by the `click_function_suffix`.
+-- "bonus" or "base" are the two valid values
+--
+-- @param y_offset float Used to put the buttons on the top or bottom of the token
+-- @param click_function_suffix fills in the suffix for handle_{thing}_{suffix}_click
 function create_button_set(y_offset, click_function_suffix)
   click_function_suffix = click_function_suffix or "bonus"
 
@@ -183,6 +198,8 @@ function create_button_set(y_offset, click_function_suffix)
   self.createButton(common_button_params)
 end
 
+--- Shortcut function that creates all of the top buttons
+-- @see create_button_set
 function create_top_buttons()
   -- Create the "name" button
   self.createButton({
@@ -204,6 +221,8 @@ function create_top_buttons()
   create_button_set(OUTPUT_BUTTON_Y_OFFSET_TOP, "bonus")
 end
 
+--- Shortcut function that creates all of the bottom buttons
+-- @see create_button_set
 function create_bottom_buttons()
   self.createInput({
     input_function = "handle_name_input",
@@ -223,26 +242,88 @@ function create_bottom_buttons()
   create_button_set(OUTPUT_BUTTON_Y_OFFSET_BOTTOM, "base")
 end
 
+--- Shortcut that creates that top and bottom buttons
+-- @see create_button_set
+-- @see create_top_buttons
+-- @see create_bottom_buttons
 function create_all_buttons()
   create_top_buttons()
   create_bottom_buttons()
 end
 
-function do_nothing(o, p, right_clicked) end
+--- As named, this function does nothing
+-- This is mostly used for buttons that don't have any real
+-- interactive purpose.
+--
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
+function do_nothing(obj, player, right_clicked) end
 
+--- Handle clicking the move button on the top
+--
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_move_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "move", right_clicked) end
+
+--- Handle clicking the attack button on the top
+--
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_attack_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "attack", right_clicked) end
+
+--- Handle clicking the range button on the top
+--
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_range_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "range", right_clicked) end
+
+--- Handle clicking the shield button on the top
+--
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_shield_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "shield", right_clicked) end
+
+--- Handle clicking the retaliate button on the top
+--
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_retaliate_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "retaliate", right_clicked) end
+
+--- Handle clicking the retaliate range button on the top-- @see change_counter_by
+--
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_retaliaterange_bonus_click(obj, player, right_clicked) change_counter_by("bonus", "retaliaterange", right_clicked) end
 
+--- Handle clicking the "name" button
+--
+-- @see change_counter_by
+-- This is more specifically named so that we can
+-- filter it out when we're doing mass changes
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_name_click(obj, player, right_clicked) end
 
----@param obj object The object the input is attached to
----@param player_color string The player color that is interacting with this input
----@param input_value string The value of the input box
----@param selected boolean If the input box is still being edite or not
+--- Handle editing the input box on the back
+-- Note, this will only update once you stop typing and click away
+-- @param obj object The object the input is attached to
+-- @param player_color string The player color that is interacting with this input
+-- @param input_value string The value of the input box
+-- @param selected boolean If the input box is still being edite or not
 function handle_name_input(obj, player_color, input_value, selected)
   if selected == true then
     return
@@ -252,13 +333,53 @@ function handle_name_input(obj, player_color, input_value, selected)
   save_current_state()
 end
 
+--- Handle clicking the move button on the bottom
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_move_base_click(obj, player, right_clicked) change_counter_by("base", "move", right_clicked) end
+
+--- Handle clicking the attack button on the bottom
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_attack_base_click(obj, player, right_clicked) change_counter_by("base", "attack", right_clicked) end
+
+--- Handle clicking the range button on the bottom
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_range_base_click(obj, player, right_clicked) change_counter_by("base", "range", right_clicked) end
+
+--- Handle clicking the shield button on the bottom
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_shield_base_click(obj, player, right_clicked) change_counter_by("base", "shield", right_clicked) end
+
+--- Handle clicking the retaliate button on the bottom
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_retaliate_base_click(obj, player, right_clicked) change_counter_by("base", "retaliate", right_clicked) end
+
+--- Handle clicking the retaliaterange button on the bottom
+-- @see change_counter_by
+-- @param obj Object The object the button belongs to
+-- @param player string Player Color that clicked the button
+-- @param right_clicked boolean True if the button was right-clicked
 function handle_retaliaterange_base_click(obj, player, right_clicked) change_counter_by("base", "retaliaterange", right_clicked) end
 
+--- Core function that handles updating the counters
+-- and also handles updating the saved state
+-- @param which_group string
+-- @param which_counter string
+-- @param value integer
 function change_counter_by(which_group, which_counter, value)
   if type(value) == "boolean" then
     if value == true then
@@ -295,6 +416,8 @@ function change_counter_by(which_group, which_counter, value)
   save_current_state()
 end
 
+--- Refresh all the labels with current values
+-- This will also compute the "final total" values
 function refresh_labels()
   for scope_name, scope_counters in pairs(COUNTERS) do
     for counter_name, _ in pairs(scope_counters) do

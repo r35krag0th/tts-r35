@@ -1,3 +1,9 @@
+----- Monster Information Helper's color schemes
+
+-- Color Mapping is used to define each of the dice colors;
+-- as well as the fig color tint;
+-- as well as the health counter color tints
+
 color_mapping = {
     red =         {0.86, 0.10, 0.09, 1.00}, -- 219, 026, 024
     green =       {0.19, 0.70, 0.17, 1.00}, -- 049, 179, 043
@@ -11,8 +17,4 @@ color_mapping = {
     lieutenant =  {0.14, 0.91, 0.82, 1.00}, -- 35, 233, 209
     master_counter = {0.68, 0.07, 0.07, 1.00}, -- 174, 20, 18, 255
     lieutenant_counter = {0.09, 0.53, 0.46}, -- 25, 136, 119 (#188775)
-  }
-  
-  COLOR_WHITE = {1, 1, 1, 1}
-  COLOR_BLACK = {0, 0, 0, 1}
-  COLOR_INVISIBLE = {0, 0, 0, 0}
+}

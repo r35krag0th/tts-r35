@@ -1,4 +1,11 @@
----@param s string any
+-- vim: ft=lua
+
+----- String Utilities
+
+--- Split a string by underscore
+--
+-- @param s string The string to split
+-- @return table of string fragments
 function split_by_underscore(s)
   if s == nil then
     error("split_by_underscore was called with a nil value")

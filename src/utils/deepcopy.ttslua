@@ -1,3 +1,12 @@
+-- vim: ft=lua
+
+----- A Deepcopy Implementation found on the internet
+
+--- Copy the input recursively so that it is a
+-- completely fresh memory address.  This is very
+-- important in certain situations where CBR bites
+-- you in the butt
+--
 ---@param orig table
 ---@return table | number | boolean
 function deep_copy(orig)

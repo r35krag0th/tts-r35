@@ -1,13 +1,8 @@
---
--- Created by IntelliJ IDEA.
--- User: xbl
--- Date: 10/4/2020
--- Time: 19:50
--- To change this template use File | Settings | File Templates.
---
+----- String Utilities
 
----@param string_input string
----@return string
+--- Title Case a string
+-- @param string_input string
+-- @return the Title Cased string
 function title_case(string_input)
     local output_buffer = {}
     for word in string.gmatch(string_input, "%S+") do

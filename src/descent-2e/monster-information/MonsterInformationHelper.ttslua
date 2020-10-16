@@ -16,6 +16,9 @@ DMIH_LoadedMonster = ""
 create_debug_lines = false
 
 #include tts-r35/src/descent-2e/monster-information/Colors
+#include tts-r35/src/utils/colors
+#include tts-r35/src/utils/deepcopy
+#include tts-r35/src/utils/find_objects
 
 -- Lazy hacking URLs for now.
 gist_sha = "32557198d41bdfa0363c161e56a58457f1a0f83a"
@@ -40,24 +43,8 @@ tracked_figs = {}
 tracked_health_counters = {}
 current_monster = {}
 
-function deepcopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[deepcopy(orig_key)] = deepcopy(orig_value)
-        end
-        setmetatable(copy, deepcopy(getmetatable(orig)))
-    else -- number, string, boolean, etc
-        copy = orig
-    end
-    return copy
-end
-
+--- Save the current object state
 function save_current_state()
-  -- print("save_current_state()")
-
   -- this needs to be a little more complicated/smart
   new_save_state = {
     tracked_figs = {},
@@ -76,12 +63,13 @@ function save_current_state()
       new_save_state.tracked_health_counters[name] = counter_obj.getGUID()
     end
   end
-  -- log(new_save_state, "r35 MIH - Saved State", "saved_state")
 
   self.script_state = JSON.encode(new_save_state)
   self.setDescription(self.script_state)
 end
 
+--- Called when TTS is creating the object
+-- @param saved_data string The object's persisted state
 function onLoad(saved_data)
   if saved_data ~= "" then
     local loaded_data = JSON.decode(saved_data)
@@ -180,9 +168,18 @@ function onLoad(saved_data)
   end
 end
 
+--- Named aptly, this does nothing
 function do_nothing()
 end
 
+--- Load Monster Data
+--
+-- This will call the r35 Descent 2e Monster Information API
+-- to get details about the card in the cardbox
+--
+-- @param name string Name of the monster (or lieutenant)
+-- @param act string|integer The act for the monster (or lieutenant)
+-- @param callback function `WebRequest` callback function
 function load_monster_data(name, act, callback)
   name = name:gsub('%W','')
   name = name:lower()
@@ -192,6 +189,10 @@ function load_monster_data(name, act, callback)
   WebRequest.get(url, callback)
 end
 
+--- Parse the monster card in the box on the mat
+-- The expected format is "Monster Name (Act I)" or "Monster Name (Act II)"
+--
+-- @param card_name string The name of the card object being parsed
 function parse_monster_card_name(card_name)
   local monster_name, monster_act = card_name:match("(.+) Act (%u)")
   return {
@@ -200,6 +201,8 @@ function parse_monster_card_name(card_name)
   }
 end
 
+--- Flatten the dice data structure into a table of strings
+-- @return Table of dice colors, repeated for each count
 function flatten_dice_data(dice)
   local output = {}
   for color_name, dice_count in pairs(dice) do
@@ -210,6 +213,7 @@ function flatten_dice_data(dice)
   return output
 end
 
+--- Reset the Dice Indicators to invisible
 function reset_dice_indicators()
   if button_index_lookup == nil then
     return
@@ -226,35 +230,29 @@ function reset_dice_indicators()
   end
 end
 
+--- Clean up created figs and health counters
 function clean_up_board()
   reset_dice_indicators()
-  -- print("(clean_up_board) cleaning up tracked figurines")
   for fig_name, fig_obj in pairs(tracked_figs) do
     if fig_obj ~= nil and fig_obj.getName() == fig_name then
       print("[6699CC](r35.DMIH)[-] Removing tracked [00FF00]fig [00FFFF]" .. fig_name .. "[-] (" .. fig_obj.guid .. ")")
       fig_obj.destroyObject()
     end
   end
-  -- print("(clean_up_board) resetting tracked_figs")
   tracked_figs = {}
 
-  -- print("(clean_up_board) cleaning up tracked health counters")
   for counter_name, counter_obj in pairs(tracked_health_counters) do
-    -- log(counter_name, "Health Counter Name: ", "health_counter_debug")
-    -- log(counter_obj, "Health Counter Object: ", "health_counter_debug")
     if counter_obj ~= nil then
       if counter_obj.getName() == counter_name then
         print("[6699CC](r35.DMIH)[-] Removing tracked [00FF00]health counter [00FFFF]" .. counter_name .. "[-] (" .. counter_obj.guid .. ")")
         counter_obj.destroyObject()
       end
-    -- else
-    --   print("[6699CC](r35.DMIH)[-] [FF0000]Counter(" .. counter_name .. ")[-] was actually null...")
     end
   end
-  -- print("(clean_up_board) resetting tracked_health_counters")
   tracked_health_counters = {}
 end
 
+--- Setup the monster based on the card that has been left inside the box
 function setup_monster()
   print("[00FFFF]=============================================================[-]")
   clean_up_board()
@@ -304,6 +302,11 @@ function setup_monster()
   end)
 end
 
+--- Setup the Lieutenant dice indicators
+-- @see setup_dice_for
+-- @see setup_minion_dice_indicators
+-- @see setup_master_dice_indicators
+-- @see setup_lieutenant_dice_indicators
 function setup_lieutenant_dice_indicators()
     local lt_attack_dice = flatten_dice_data(current_monster.by_group_size["4"].dice.attack)
     local lt_defense_dice = flatten_dice_data(current_monster.by_group_size["4"].dice.defense)
@@ -318,6 +321,11 @@ function setup_lieutenant_dice_indicators()
     }, true)
 end
 
+--- Setup the master dice indicators
+-- @see setup_dice_for
+-- @see setup_minion_dice_indicators
+-- @see setup_master_dice_indicators
+-- @see setup_lieutenant_dice_indicators
 function setup_master_dice_indicators()
     -- Flatten the dice into a single array of the color names, repeating for multiple of a kind
     local master_attack_dice = flatten_dice_data(current_monster.master.dice.attack)
@@ -333,7 +341,6 @@ function setup_master_dice_indicators()
     --       I will eventually figure out how I want to handle that.
     for i=1, current_monster.master.group_count["4"], 1 do
       local master_fig_name = current_monster.name .. " Master " .. i
-      -- print("(setup_monster) calling create_fig() for " .. master_fig_name)
       create_fig(current_monster.figurine, master_fig_name, {
         x = (i * -0.75) + 2.25,
         y = 0,
@@ -342,6 +349,11 @@ function setup_master_dice_indicators()
     end
 end
 
+--- Setup the minion dice indicators
+-- @see setup_dice_for
+-- @see setup_minion_dice_indicators
+-- @see setup_master_dice_indicators
+-- @see setup_lieutenant_dice_indicators
 function setup_minion_dice_indicators()
     local minion_attack_dice = flatten_dice_data(current_monster.minion.dice.attack)
     local minion_defense_dice = flatten_dice_data(current_monster.minion.dice.defense)
@@ -362,6 +374,13 @@ function setup_minion_dice_indicators()
     end
 end
 
+--- Helper function to setup dice by button label
+-- @see setup_dice_for
+-- @see setup_minion_dice_indicators
+-- @see setup_master_dice_indicators
+-- @see setup_lieutenant_dice_indicators
+-- @param target_label string the button label that will be looked up
+-- @param params table
 function setup_dice_for(target_label, params)
   local button_index = button_index_lookup[target_label]
   if button_index == nil then
@@ -373,73 +392,6 @@ function setup_dice_for(target_label, params)
   self.editButton(params)
 end
 
-function find_in_radius_by(pos, radius, func)
-  local object_list = Physics.cast({
-    origin=pos,
-    direction={0, 1, 0},
-    type=2,
-    size={radius, radius, radius},
-    max_distance=0,
-  })
-
-  local refined_list = {}
-  for _, obj in ipairs(object_list) do
-    if func == nil then
-      table.insert(refined_list, obj.hit_object)
-    else
-      if func(obj.hit_object) then
-        table.insert(refined_list, obj.hit_object)
-      end
-    end
-  end
-
-  return refined_list
-end
-
-function find_closest_in_radius_by(pos, radius, filter_func)
-  -- Get the objects at the given position with the radius
-  -- log(pos, "Find Closest In Radius By (Position): ", "find_closest_in_radius_by")
-  -- log(radius, "Find Closest In Radius By (Radius): ", "find_closest_in_radius_by")
-  -- log(filter_func, "Find Closest In Radius By (Filter Func): ", "find_closest_in_radius_by")
-
-  if type(radius) == "number" then
-    radius = {radius, radius, radius}
-  end
-
-  local object_list = Physics.cast({
-    origin=pos,
-    direction={0, 1, 0},
-    type=3,
-    size=radius,
-    max_distance=1,
-    debug = false,
-  })
-
-  -- Apply the filtering function
-  local refined_list = {}
-  for _, obj in ipairs(object_list) do
-    if filter_func == nil then
-      table.insert(obj)
-    else
-      if filter_func(obj.hit_object) then
-        table.insert(obj)
-      end
-    end
-  end
-
-  -- Find the closest object out of all objects returned
-  local output = nil
-  for i, v in pairs(object_list) do
-    if output == nil then
-      output = v
-    else
-      if v.distance < output.distance then
-        output = v
-      end
-    end
-  end
-  return output
-end
 
 function create_fig(fig_data, name, fig_pos, is_master)
   if is_master == nil then
@@ -505,11 +457,11 @@ function create_fig(fig_data, name, fig_pos, is_master)
   })
   fig.setName(name)
 
-    
+
   -- set the DMIH trackers
   function f()
     fig.script_state = ""
-    
+
     -- Set a few variables
     -- fig.setVar('DMIH_CLASS', 'monster.fig')
     -- fig.setVar('DMIH_NAME', name)
@@ -525,7 +477,7 @@ function create_fig(fig_data, name, fig_pos, is_master)
       error(res)
     end
   end)
-  
+
 
   fig_description = ""
   fig_description = fig_description .. "\n[FF0000]Health: " .. monster_data.health .. "[-]"
@@ -628,11 +580,6 @@ function create_health_counter_v2(rgb_color, text_color, name, max_health, posit
     sount = false,
     snap_to_grid = true,
   })
-  -- print("==> Just after SpawnObject")
-  -- -- dump(new_health_counter)
-  -- print(inspect_lua(new_health_counter))
-  -- print(inspect_lua(new_health_counter.getGUID()))
-  -- print(inspect_lua(new_health_counter.guid))
 
   new_health_counter.setCustomObject({
     image = "http://cloud-3.steamusercontent.com/ugc/958597478463059274/DE73B64E1B5C6F272EA3BEE5EF458E73E48FF03D/",
@@ -641,10 +588,7 @@ function create_health_counter_v2(rgb_color, text_color, name, max_health, posit
     stackable = false,
     stand_up = false,
   })
-  -- print("==> Just after new_health_counter.setCustomObject")
-  -- print(inspect_lua(new_health_counter))
-  -- print(inspect_lua(new_health_counter.getGUID()))
-  -- print(inspect_lua(new_health_counter.guid))
+
   new_health_counter.drag = 10
   new_health_counter.angular_drag = 1
   new_health_counter.mass = 0.91
@@ -661,26 +605,9 @@ function create_health_counter_v2(rgb_color, text_color, name, max_health, posit
       rotation_snap    = true,
     },
   })
-  -- new_health_counter.luascript = "-- Coming soon\n"
-  -- new_health_counter.lua_script_state = "{}"
-  -- print("==> Just before new_health_counter.reload")
-  -- print(inspect_lua(new_health_counter))
-  -- print(inspect_lua(new_health_counter.getGUID()))
-  -- print(inspect_lua(new_health_counter.guid))
   new_health_counter.reload()
 
-  -- print("==> Just after new_health_counter.reload")
-  -- print(inspect_lua(new_health_counter))
-  -- print(inspect_lua(new_health_counter.getGUID()))
-  -- print(inspect_lua(new_health_counter.guid))
-
   tracked_health_counters[name] = new_health_counter
-
-  -- print("Physics casting for the new counter")
-  -- log(new_health_counter, "new_health_counter", "health_counter")
-  -- X = width of "box"
-  -- Y = height of "box"
-  -- Z = depth of "box"
 
   -- visualize the physics cast
   local radius = {
@@ -833,20 +760,9 @@ function create_health_counter_v2(rgb_color, text_color, name, max_health, posit
 
       local is_found = check_name_ok and check_description_ok and check_tag_ok
 
-      -- print("[FFFF00]Checking " .. o.getName() .. " against " .. name .. "[-]")
-      -- print("--> " .. boolean_to_pass_fail_colored_string(check_name_ok) .. " name: " .. o.getName() .. " ||| Expecting: " .. name)
-      -- print("--> " .. boolean_to_pass_fail_colored_string(check_description_ok) .. " description: " .. o.getDescription() .. " ||| Expecting: " .. HEALTH_COUNTER_DESCRIPTION)
-      -- print("--> " .. boolean_to_pass_fail_colored_string(check_tag_ok) .. " tag: " .. o.tag .. " ||| Expecting: Generic or Tile")
-      -- print("<-- Final Result " .. boolean_to_pass_fail_colored_string(is_found))
-      -- print("")
-      -- log(o, "Physics Cast Object", "physics_cast_object")
-
       if is_found then
         o.highlightOn({0, 1, 0, 1}, 5)
-      -- else
-      --   o.highlightOn({1, 0, 0, 1}, 2)
       end
-      -- return o.getName() == name and (o.tag == "Tile" or o.tag == "Generic") and o.getDescription() == HEALTH_COUNTER_DESCRIPTION
       return is_found
     end)
 
@@ -856,15 +772,8 @@ function create_health_counter_v2(rgb_color, text_color, name, max_health, posit
     local check_tag_ok = (o.tag == "Tile" or o.tag == "Generic")
 
     local is_found = check_name_ok and check_description_ok and check_tag_ok
-    -- print("[FFFF00] POST POST POST POST Checking " .. o.getName() .. " against " .. name .. "[-]")
-    -- print("--> " .. boolean_to_pass_fail_colored_string(check_name_ok) .. " name: " .. o.getName() .. " ||| Expecting: " .. name)
-    -- print("--> " .. boolean_to_pass_fail_colored_string(check_description_ok) .. " description: " .. o.getDescription() .. " ||| Expecting: " .. HEALTH_COUNTER_DESCRIPTION)
-    -- print("--> " .. boolean_to_pass_fail_colored_string(check_tag_ok) .. " tag: " .. o.tag .. " ||| Expecting: Generic or Tile")
-    -- print("<-- Final Result " .. boolean_to_pass_fail_colored_string(is_found))
-    -- print("")
 
     tracked_health_counters[name] = this_counter.hit_object
-    -- this_counter.hit_object.highlightOn({0, 1, 1, 1}, 5)
 
   end, 120)
 
@@ -872,18 +781,9 @@ function create_health_counter_v2(rgb_color, text_color, name, max_health, posit
 
 end
 
-function boolean_to_pass_fail_colored_string(v)
-  if v == true then
-    return "[00FF00](PASS)[-]"
-  end
-  return "[FF0000](FAIL)[-]"
-end
-
 function create_master_health_counter(name, max_health, position, rotation, scale)
   return create_health_counter_v2(color_mapping.master_counter, {hex = "FFFFFF", rgba = {1, 1, 1, 95}}, name, max_health, position, rotation, scale)
 end
-
--- "COLOR_HEX\":\"#3F3F3F\",\"CONTEXT_FIVE\":false,\"CONTEXT_
 
 function create_minion_health_counter(name, max_health, position, rotation, scale)
   return create_health_counter_v2(color_mapping.minion, { hex = "333333", rgba = {0.24,0.24,0.24,95}}, name, max_health, position, rotation, scale)
@@ -891,17 +791,4 @@ end
 
 function create_lieutenant_health_counter(name, max_health, position, rotation, scale)
   return create_health_counter_v2(color_mapping.lieutenant_counter, { hex = "FFFFFF", rgba = {1, 1, 1, 95}}, name, max_health, position, rotation, scale)
-end
-
-function typeof(var)
-    local _type = type(var);
-    if(_type ~= "table" and _type ~= "userdata") then
-        return _type;
-    end
-    local _meta = getmetatable(var);
-    if(_meta ~= nil and _meta._NAME ~= nil) then
-        return _meta._NAME;
-    else
-        return _type;
-    end
 end

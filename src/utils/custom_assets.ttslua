@@ -1,8 +1,14 @@
+-- vim: ft=lua
+
+------
+-- Utility functions to handle loading Custom UI Assets
+
 --- Adds a Tabletop Simulator Custom UI Asset if it doesn't exist already
----@param t table
----@param name string
----@param url string
----@return table
+--
+-- @param t table
+-- @param name string
+-- @param url string
+-- @return table (list of name and urls)
 function add_custom_asset(t, name, url)
     if has_custom_asset(name, url) then
         return t
@@ -16,9 +22,10 @@ function add_custom_asset(t, name, url)
 end
 
 --- Checks to see if a Custom UI Asset exists
----@param name string
----@param url string
----@return boolean
+--
+-- @param name string
+-- @param url string
+-- @return boolean
 function has_custom_asset(name, url)
     for _, v in pairs(UI.getCustomAssets()) do
         if v.name == name and v.url == url then
@@ -27,3 +34,4 @@ function has_custom_asset(name, url)
     end
     return false
 end
+

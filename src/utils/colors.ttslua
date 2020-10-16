@@ -1,7 +1,21 @@
+-- vim: ft=lua
+
+------
+-- A collection of useful functions that help convert
+-- colors between formats, and also provides canned colors.
+
 COLOR_WHITE = { 1.00, 1.00, 1.00, 1.00 }
 COLOR_BLACK = { 0.00, 0.00, 0.00, 1.00 }
 COLOR_INVISIBLE = { 0.00, 0.00, 0.00, 0.00 }
 
+--- Convert a hex color string to RGBA
+--
+-- TTS Scripting API Docs for "Color" https://api.tabletopsimulator.com/color/
+--
+-- @see rgba_255_to_rgba_1
+-- @param hex string 6-character Hex Color; hashtag optional
+-- @param alpha integer Alpha (from 0-1)
+-- @return Color object
 function hex_color_to_rgba(hex, alpha)
   alpha = alpha or 1
   hex = hex:gsub("#", "")
@@ -14,6 +28,16 @@ function hex_color_to_rgba(hex, alpha)
   )
 end
 
+--- Converts RGBA 0-255 to RGBA 0-1
+--
+-- TTS Scripting API Docs for "Color" https://api.tabletopsimulator.com/color/
+--
+-- @see hex_color_to_rgba
+-- @param red integer Red channel value (0-255)
+-- @param green integer Red channel value (0-255)
+-- @param blue integer Red channel value (0-255)
+-- @param alpha integer Alpha (from 0-1)
+-- @return Color object
 function rgba_255_to_rgba_1(red, green, blue, alpha)
   alpha = alpha or 1
 
