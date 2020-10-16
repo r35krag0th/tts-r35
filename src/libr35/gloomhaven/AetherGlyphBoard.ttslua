@@ -4,11 +4,8 @@
 -- >>> Diff/Image: http://i.imgur.com/ygviq8X.png
 -- >>> Normal/Bump: http://i.imgur.com/rx9djm1.png
 
--- Include split_by_colon
-#include tts-r35/src/utils/split_by_colon
-
--- Include split_by_comma
-#include tts-r35/src/utils/split_by_comma
+-- Include libr35 string utils
+#include tts-r35/src/libr35/utils/strings
 
 -- The maintained state
 CELL_VALUES = {

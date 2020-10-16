@@ -7,8 +7,8 @@
 ATTACK_HELPER_CUSTOM_TOKEN_IMAGE = "https://cdn.r35.net/tts-modding/objects/rounded-squares/Gloomhaven-Attack-Helper-v2.png"
 ATTACK_HELPER_VERSION = 1
 
-#include tts-r35/src/utils/colors
-#include tts-r35/src/utils/split_by_underscore
+#include tts-r35/src/libr35/utils/colors
+#include tts-r35/src/libr35/utils/strings
 
 -- TODO: Figure out where to put a reset button
 
