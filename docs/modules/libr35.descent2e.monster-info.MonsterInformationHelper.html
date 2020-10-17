@@ -1,0 +1,373 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/libr35.descent2e.monster-info.Colors.html">libr35.descent2e.monster-info.Colors</a></li>
+  <li><strong>libr35.descent2e.monster-info.MonsterInformationHelper</strong></li>
+  <li><a href="../modules/libr35.gloomhaven.AttackHelper.html">libr35.gloomhaven.AttackHelper</a></li>
+  <li><a href="../modules/libr35.utils.colors.html">libr35.utils.colors</a></li>
+  <li><a href="../modules/libr35.utils.custom_assets.html">libr35.utils.custom_assets</a></li>
+  <li><a href="../modules/libr35.utils.deepcopy.html">libr35.utils.deepcopy</a></li>
+  <li><a href="../modules/utils.titlecase.html">utils.titlecase</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>libr35.descent2e.monster-info.MonsterInformationHelper</code></h1>
+<p>Save the current object state</p>
+<p></p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#onLoad">onLoad (saved_data)</a></td>
+	<td class="summary">Called when TTS is creating the object</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#do_nothing">do_nothing ()</a></td>
+	<td class="summary">Named aptly, this does nothing</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#load_monster_data">load_monster_data (name, act, callback)</a></td>
+	<td class="summary">Load Monster Data</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#parse_monster_card_name">parse_monster_card_name (card_name)</a></td>
+	<td class="summary">Parse the monster card in the box on the mat
+ The expected format is "Monster Name (Act I)" or "Monster Name (Act II)"</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#flatten_dice_data">flatten_dice_data (dice)</a></td>
+	<td class="summary">Flatten the dice data structure into a table of strings</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#reset_dice_indicators">reset_dice_indicators ()</a></td>
+	<td class="summary">Reset the Dice Indicators to invisible</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#clean_up_board">clean_up_board ()</a></td>
+	<td class="summary">Clean up created figs and health counters</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#setup_monster">setup_monster ()</a></td>
+	<td class="summary">Setup the monster based on the card that has been left inside the box</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#setup_lieutenant_dice_indicators">setup_lieutenant_dice_indicators ()</a></td>
+	<td class="summary">Setup the Lieutenant dice indicators</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#setup_master_dice_indicators">setup_master_dice_indicators ()</a></td>
+	<td class="summary">Setup the master dice indicators</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#setup_minion_dice_indicators">setup_minion_dice_indicators ()</a></td>
+	<td class="summary">Setup the minion dice indicators</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#setup_dice_for">setup_dice_for (target_label, params)</a></td>
+	<td class="summary">Helper function to setup dice by button label</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "onLoad"></a>
+    <strong>onLoad (saved_data)</strong>
+    </dt>
+    <dd>
+    Called when TTS is creating the object
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">saved_data</span>
+         string The object's persisted state
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "do_nothing"></a>
+    <strong>do_nothing ()</strong>
+    </dt>
+    <dd>
+    Named aptly, this does nothing
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "load_monster_data"></a>
+    <strong>load_monster_data (name, act, callback)</strong>
+    </dt>
+    <dd>
+    Load Monster Data  This will call the r35 Descent 2e Monster Information API
+ to get details about the card in the cardbox
+
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">name</span>
+         string Name of the monster (or lieutenant)
+        </li>
+        <li><span class="parameter">act</span>
+         string|integer The act for the monster (or lieutenant)
+        </li>
+        <li><span class="parameter">callback</span>
+         function `WebRequest` callback function
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "parse_monster_card_name"></a>
+    <strong>parse_monster_card_name (card_name)</strong>
+    </dt>
+    <dd>
+    Parse the monster card in the box on the mat
+ The expected format is "Monster Name (Act I)" or "Monster Name (Act II)"
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">card_name</span>
+         string The name of the card object being parsed
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "flatten_dice_data"></a>
+    <strong>flatten_dice_data (dice)</strong>
+    </dt>
+    <dd>
+    Flatten the dice data structure into a table of strings
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">dice</span>
+
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Table of dice colors, repeated for each count
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "reset_dice_indicators"></a>
+    <strong>reset_dice_indicators ()</strong>
+    </dt>
+    <dd>
+    Reset the Dice Indicators to invisible
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "clean_up_board"></a>
+    <strong>clean_up_board ()</strong>
+    </dt>
+    <dd>
+    Clean up created figs and health counters
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "setup_monster"></a>
+    <strong>setup_monster ()</strong>
+    </dt>
+    <dd>
+    Setup the monster based on the card that has been left inside the box
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "setup_lieutenant_dice_indicators"></a>
+    <strong>setup_lieutenant_dice_indicators ()</strong>
+    </dt>
+    <dd>
+    Setup the Lieutenant dice indicators
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_dice_for">setup_dice_for</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_minion_dice_indicators">setup_minion_dice_indicators</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_master_dice_indicators">setup_master_dice_indicators</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_lieutenant_dice_indicators">setup_lieutenant_dice_indicators</a></li>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "setup_master_dice_indicators"></a>
+    <strong>setup_master_dice_indicators ()</strong>
+    </dt>
+    <dd>
+    Setup the master dice indicators
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_dice_for">setup_dice_for</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_minion_dice_indicators">setup_minion_dice_indicators</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_master_dice_indicators">setup_master_dice_indicators</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_lieutenant_dice_indicators">setup_lieutenant_dice_indicators</a></li>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "setup_minion_dice_indicators"></a>
+    <strong>setup_minion_dice_indicators ()</strong>
+    </dt>
+    <dd>
+    Setup the minion dice indicators
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_dice_for">setup_dice_for</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_minion_dice_indicators">setup_minion_dice_indicators</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_master_dice_indicators">setup_master_dice_indicators</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_lieutenant_dice_indicators">setup_lieutenant_dice_indicators</a></li>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "setup_dice_for"></a>
+    <strong>setup_dice_for (target_label, params)</strong>
+    </dt>
+    <dd>
+    Helper function to setup dice by button label
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">target_label</span>
+         string the button label that will be looked up
+        </li>
+        <li><span class="parameter">params</span>
+         table
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_dice_for">setup_dice_for</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_minion_dice_indicators">setup_minion_dice_indicators</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_master_dice_indicators">setup_master_dice_indicators</a></li>
+         <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html#setup_lieutenant_dice_indicators">setup_lieutenant_dice_indicators</a></li>
+    </ul>
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2020-10-17 18:50:44 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>

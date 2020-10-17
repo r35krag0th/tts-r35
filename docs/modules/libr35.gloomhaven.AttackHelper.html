@@ -1,0 +1,806 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+<li><a href="#Fields">Fields</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/libr35.descent2e.monster-info.Colors.html">libr35.descent2e.monster-info.Colors</a></li>
+  <li><a href="../modules/libr35.descent2e.monster-info.MonsterInformationHelper.html">libr35.descent2e.monster-info.MonsterInformationHelper</a></li>
+  <li><strong>libr35.gloomhaven.AttackHelper</strong></li>
+  <li><a href="../modules/libr35.utils.colors.html">libr35.utils.colors</a></li>
+  <li><a href="../modules/libr35.utils.custom_assets.html">libr35.utils.custom_assets</a></li>
+  <li><a href="../modules/libr35.utils.deepcopy.html">libr35.utils.deepcopy</a></li>
+  <li><a href="../modules/utils.titlecase.html">utils.titlecase</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>libr35.gloomhaven.AttackHelper</code></h1>
+<p>Gloomhaven Attack Helper</p>
+<p></p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#onLoad">onLoad (saved_data)</a></td>
+	<td class="summary">Called when the object is being loaded by TTS</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#save_current_state">save_current_state ()</a></td>
+	<td class="summary">Save the object's current state</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#set_object_name">set_object_name (new_name)</a></td>
+	<td class="summary">Set the object's name, or a sane default</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#create_button_set">create_button_set (y_offset, click_function_suffix)</a></td>
+	<td class="summary">Create a button set!
+<p> This will dynamically create the six buttons for top or bottom
+ the top vs bottom is determined by the `click_function_suffix`.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#create_top_buttons">create_top_buttons ()</a></td>
+	<td class="summary">Shortcut function that creates all of the top buttons</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#create_bottom_buttons">create_bottom_buttons ()</a></td>
+	<td class="summary">Shortcut function that creates all of the bottom buttons</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#create_all_buttons">create_all_buttons ()</a></td>
+	<td class="summary">Shortcut that creates that top and bottom buttons</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#do_nothing">do_nothing (obj, player, right_clicked)</a></td>
+	<td class="summary">As named, this function does nothing
+ This is mostly used for buttons that don't have any real
+ interactive purpose.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_move_bonus_click">handle_move_bonus_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the move button on the top</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_attack_bonus_click">handle_attack_bonus_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the attack button on the top</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_range_bonus_click">handle_range_bonus_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the range button on the top</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_shield_bonus_click">handle_shield_bonus_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the shield button on the top</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_retaliate_bonus_click">handle_retaliate_bonus_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the retaliate button on the top</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_name_click">handle_name_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the "name" button</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_name_input">handle_name_input (obj, player_color, input_value, selected)</a></td>
+	<td class="summary">Handle editing the input box on the back
+ Note, this will only update once you stop typing and click away</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_move_base_click">handle_move_base_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the move button on the bottom</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_attack_base_click">handle_attack_base_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the attack button on the bottom</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_range_base_click">handle_range_base_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the range button on the bottom</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_shield_base_click">handle_shield_base_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the shield button on the bottom</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_retaliate_base_click">handle_retaliate_base_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the retaliate button on the bottom</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#handle_retaliaterange_base_click">handle_retaliaterange_base_click (obj, player, right_clicked)</a></td>
+	<td class="summary">Handle clicking the retaliaterange button on the bottom</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#change_counter_by">change_counter_by (which_group, which_counter, value)</a></td>
+	<td class="summary">Core function that handles updating the counters
+ and also handles updating the saved state</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#refresh_labels">refresh_labels ()</a></td>
+	<td class="summary">Refresh all the labels with current values
+ This will also compute the "final total" values</td>
+	</tr>
+</table>
+<h2><a href="#Fields">Fields</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#ATTACK_HELPER_CUSTOM_TOKEN_IMAGE">ATTACK_HELPER_CUSTOM_TOKEN_IMAGE</a></td>
+	<td class="summary">The Attack helper is a simple little object to help
+ compute the final values for a monster's abilities
+ >>> Custom Token Image: https://cdn.r35.net/tts-modding/objects/rounded-squares/Gloomhaven-Attack-Helper-v2.png</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "onLoad"></a>
+    <strong>onLoad (saved_data)</strong>
+    </dt>
+    <dd>
+    Called when the object is being loaded by TTS
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">saved_data</span>
+         string
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "save_current_state"></a>
+    <strong>save_current_state ()</strong>
+    </dt>
+    <dd>
+    Save the object's current state
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "set_object_name"></a>
+    <strong>set_object_name (new_name)</strong>
+    </dt>
+    <dd>
+    Set the object's name, or a sane default
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">new_name</span>
+
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "create_button_set"></a>
+    <strong>create_button_set (y_offset, click_function_suffix)</strong>
+    </dt>
+    <dd>
+    Create a button set!
+<p> This will dynamically create the six buttons for top or bottom
+ the top vs bottom is determined by the `click_function_suffix`.
+ "bonus" or "base" are the two valid values
+
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">y_offset</span>
+         float Used to put the buttons on the top or bottom of the token
+        </li>
+        <li><span class="parameter">click_function_suffix</span>
+         fills in the suffix for handle_{thing}_{suffix}_click
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "create_top_buttons"></a>
+    <strong>create_top_buttons ()</strong>
+    </dt>
+    <dd>
+    Shortcut function that creates all of the top buttons
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#create_button_set">create_button_set</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "create_bottom_buttons"></a>
+    <strong>create_bottom_buttons ()</strong>
+    </dt>
+    <dd>
+    Shortcut function that creates all of the bottom buttons
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#create_button_set">create_button_set</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "create_all_buttons"></a>
+    <strong>create_all_buttons ()</strong>
+    </dt>
+    <dd>
+    Shortcut that creates that top and bottom buttons
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <li><a href="../modules/libr35.gloomhaven.AttackHelper.html#create_button_set">create_button_set</a></li>
+         <li><a href="../modules/libr35.gloomhaven.AttackHelper.html#create_top_buttons">create_top_buttons</a></li>
+         <li><a href="../modules/libr35.gloomhaven.AttackHelper.html#create_bottom_buttons">create_bottom_buttons</a></li>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "do_nothing"></a>
+    <strong>do_nothing (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    As named, this function does nothing
+ This is mostly used for buttons that don't have any real
+ interactive purpose.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "handle_move_bonus_click"></a>
+    <strong>handle_move_bonus_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the move button on the top
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_attack_bonus_click"></a>
+    <strong>handle_attack_bonus_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the attack button on the top
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_range_bonus_click"></a>
+    <strong>handle_range_bonus_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the range button on the top
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_shield_bonus_click"></a>
+    <strong>handle_shield_bonus_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the shield button on the top
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_retaliate_bonus_click"></a>
+    <strong>handle_retaliate_bonus_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the retaliate button on the top
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_name_click"></a>
+    <strong>handle_name_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the "name" button
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_name_input"></a>
+    <strong>handle_name_input (obj, player_color, input_value, selected)</strong>
+    </dt>
+    <dd>
+    Handle editing the input box on the back
+ Note, this will only update once you stop typing and click away
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         object The object the input is attached to
+        </li>
+        <li><span class="parameter">player_color</span>
+         string The player color that is interacting with this input
+        </li>
+        <li><span class="parameter">input_value</span>
+         string The value of the input box
+        </li>
+        <li><span class="parameter">selected</span>
+         boolean If the input box is still being edite or not
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "handle_move_base_click"></a>
+    <strong>handle_move_base_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the move button on the bottom
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_attack_base_click"></a>
+    <strong>handle_attack_base_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the attack button on the bottom
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_range_base_click"></a>
+    <strong>handle_range_base_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the range button on the bottom
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_shield_base_click"></a>
+    <strong>handle_shield_base_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the shield button on the bottom
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_retaliate_base_click"></a>
+    <strong>handle_retaliate_base_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the retaliate button on the bottom
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "handle_retaliaterange_base_click"></a>
+    <strong>handle_retaliaterange_base_click (obj, player, right_clicked)</strong>
+    </dt>
+    <dd>
+    Handle clicking the retaliaterange button on the bottom
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">obj</span>
+         Object The object the button belongs to
+        </li>
+        <li><span class="parameter">player</span>
+         string Player Color that clicked the button
+        </li>
+        <li><span class="parameter">right_clicked</span>
+         boolean True if the button was right-clicked
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/libr35.gloomhaven.AttackHelper.html#change_counter_by">change_counter_by</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "change_counter_by"></a>
+    <strong>change_counter_by (which_group, which_counter, value)</strong>
+    </dt>
+    <dd>
+    Core function that handles updating the counters
+ and also handles updating the saved state
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">which_group</span>
+         string
+        </li>
+        <li><span class="parameter">which_counter</span>
+         string
+        </li>
+        <li><span class="parameter">value</span>
+         integer
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "refresh_labels"></a>
+    <strong>refresh_labels ()</strong>
+    </dt>
+    <dd>
+    Refresh all the labels with current values
+ This will also compute the "final total" values
+
+
+
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header "><a name="Fields"></a>Fields</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "ATTACK_HELPER_CUSTOM_TOKEN_IMAGE"></a>
+    <strong>ATTACK_HELPER_CUSTOM_TOKEN_IMAGE</strong>
+    </dt>
+    <dd>
+    The Attack helper is a simple little object to help
+ compute the final values for a monster's abilities
+ >>> Custom Token Image: https://cdn.r35.net/tts-modding/objects/rounded-squares/Gloomhaven-Attack-Helper-v2.png
+
+
+
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2020-10-17 18:50:44 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>
