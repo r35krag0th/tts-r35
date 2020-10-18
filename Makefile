@@ -1,5 +1,6 @@
 docs:
-	ldoc --all --dir docs src
+	@# ldoc --all --dir docs src
+	ldoc .
 
 docs-with-config:
 	ldoc --all --config docs/config.ld
