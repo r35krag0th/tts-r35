@@ -1,0 +1,11 @@
+-- vim: ft=lua
+project = "r35 TTS Libraries"
+title = "r35 Tabletop Simulator Libraries"
+description = "A collection of my Lua libraries used across all of my creations."
+package = "libr35"
+file = "src/"
+dir = "docs/"
+merge = true
+-- style = "!r35"
+backtick_references = true
+sort = true

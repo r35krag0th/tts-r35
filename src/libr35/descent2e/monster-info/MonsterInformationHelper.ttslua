@@ -15,10 +15,10 @@ DMIH_LoadedMonster = ""
 
 create_debug_lines = false
 
-#include tts-r35/src/descent-2e/monster-information/Colors
-#include tts-r35/src/utils/colors
-#include tts-r35/src/utils/deepcopy
-#include tts-r35/src/utils/find_objects
+#include tts-r35/src/libr35/descent-2e/monster-info/Colors
+#include tts-r35/src/libr35/utils/colors
+#include tts-r35/src/libr35/utils/deepcopy
+#include tts-r35/src/libr35/utils/find_objects
 
 -- Lazy hacking URLs for now.
 gist_sha = "32557198d41bdfa0363c161e56a58457f1a0f83a"
