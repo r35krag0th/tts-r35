@@ -7,6 +7,8 @@
 COLOR_WHITE = { 1.00, 1.00, 1.00, 1.00 }
 COLOR_BLACK = { 0.00, 0.00, 0.00, 1.00 }
 COLOR_INVISIBLE = { 0.00, 0.00, 0.00, 0.00 }
+COLOR_GREEN = {0.19, 0.70, 0.17, 1.00}
+COLOR_BLUE = {0.12, 0.53, 1.00, 1.00}
 
 --- Convert a hex color string to RGBA
 --
